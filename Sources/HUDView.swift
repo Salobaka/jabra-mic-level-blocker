@@ -48,6 +48,12 @@ struct HUDView: View {
                 ))
                 .font(.system(size: 12))
 
+                Toggle("Show Dock icon", isOn: Binding(
+                    get: { audioManager.showDockIcon },
+                    set: { audioManager.showDockIcon = $0 }
+                ))
+                .font(.system(size: 12))
+
                 LevelBar(level: audioManager.level)
                     .frame(height: 14)
 

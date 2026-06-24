@@ -3,6 +3,7 @@ import CoreAudio
 import AVFoundation
 import CoreAudioTypes
 import AudioToolbox
+import Cocoa
 
 final class AudioDeviceManager: ObservableObject {
     static let minimumGain: Float = 0.10
@@ -14,6 +15,12 @@ final class AudioDeviceManager: ObservableObject {
     @Published var isRunning: Bool = false
     @Published var level: Float = 0.0
     @Published var lockVolume: Bool = true
+    @Published var showDockIcon: Bool = true {
+        didSet {
+            applyDockIconPolicy()
+            UserDefaults.standard.set(showDockIcon, forKey: "showDockIcon")
+        }
+    }
     @Published var authorizationStatus: MicrophoneAuthorization = MicrophonePermission.shared.status
     @Published var gainIsWritable: Bool = false
 
@@ -25,8 +32,15 @@ final class AudioDeviceManager: ObservableObject {
     private let queue = DispatchQueue(label: "com.jabrainputtracker.audio", qos: .userInitiated)
 
     init() {
+        showDockIcon = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? true
         refreshDevices()
         setupDeviceChangeListener()
+        applyDockIconPolicy()
+    }
+
+    private func applyDockIconPolicy() {
+        let policy: NSApplication.ActivationPolicy = showDockIcon ? .regular : .accessory
+        NSApplication.shared.setActivationPolicy(policy)
     }
 
     // MARK: - Permission
