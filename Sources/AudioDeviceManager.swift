@@ -87,6 +87,7 @@ final class AudioDeviceManager: ObservableObject {
         for id in deviceIDs {
             guard let name = getDeviceName(id: id) else { continue }
             guard getInputChannels(id: id) > 0 else { continue }
+            guard isBluetoothDevice(id: id) else { continue }
             let lower = name.lowercased()
             guard lower.contains("jabra") else { continue }
             if lower.contains("85h") {
@@ -97,6 +98,21 @@ final class AudioDeviceManager: ObservableObject {
             }
         }
         return fallback
+    }
+
+    private func isBluetoothDevice(id: AudioDeviceID) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectHasProperty(id, &address) else { return false }
+        var transportType: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        let status = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &transportType)
+        guard status == noErr else { return false }
+        return transportType == kAudioDeviceTransportTypeBluetooth
+            || transportType == kAudioDeviceTransportTypeBluetoothLE
     }
 
     private func getDeviceName(id: AudioDeviceID) -> String? {
