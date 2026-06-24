@@ -14,7 +14,7 @@ This menu-bar tool keeps the Jabra input gain at a safe minimum level and active
 
 - Menu-bar icon with a popover containing all controls
 - Floating HUD with live mic level meter (Jabra Elite 85h)
-- Input gain fader from **10% to 100%**
+- Input gain fader from **10% to 100%** — set the mic level in percent, not arbitrary units
 - **10% minimum gain is always enforced** — you can never be accidentally muted to zero
 - **Unmute on every gain write** — clears the hardware/OS mute flag
 - **Lock input level** — re-applies the chosen gain 4× per second so apps like MS Teams, Kumospace, Zoom and Google Meet cannot pull the mic level down
