@@ -86,7 +86,8 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
               let baseSymbol = baseSymbol else { return }
 
         let isLocked = audioManager.lockVolume
-        let symbolColor: NSColor = isLocked ? .white : .systemOrange
+        let backgroundColor: NSColor = isLocked ? .systemOrange : .white
+        let symbolColor: NSColor = isLocked ? .white : .black
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
             .applying(.init(hierarchicalColor: symbolColor))
         let colored = baseSymbol.withSymbolConfiguration(config) ?? baseSymbol
@@ -95,11 +96,15 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         let result = NSImage(size: size)
         result.lockFocus()
 
-        // Soft orange breathing background.
-        NSColor.systemOrange.withAlphaComponent(alpha).setFill()
+        // Locked: soft orange breathing background. Unlocked: plain white background.
+        if isLocked {
+            backgroundColor.withAlphaComponent(alpha).setFill()
+        } else {
+            backgroundColor.setFill()
+        }
         NSRect(origin: .zero, size: size).fill()
 
-        // Draw mic icon using source-atop so it tints over the orange background.
+        // Draw mic icon using source-atop so it tints over the background.
         colored.draw(in: NSRect(origin: .zero, size: size),
                      from: NSRect(origin: .zero, size: size),
                      operation: .sourceAtop,
