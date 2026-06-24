@@ -52,8 +52,8 @@ final class LevelMeter {
             var sum: Float = 0
             for channel in 0..<channelCount {
                 let data = channelData[channel]
-                for i in 0..<frames {
-                    let sample = data[i]
+                for index in 0..<frames {
+                    let sample = data[index]
                     sum += sample * sample
                 }
             }
@@ -62,8 +62,8 @@ final class LevelMeter {
             var sum: Float = 0
             for channel in 0..<channelCount {
                 let data = int16Data[channel]
-                for i in 0..<frames {
-                    let sample = Float(data[i]) / 32768.0
+                for index in 0..<frames {
+                    let sample = Float(data[index]) / 32768.0
                     sum += sample * sample
                 }
             }
@@ -72,8 +72,8 @@ final class LevelMeter {
             var sum: Float = 0
             for channel in 0..<channelCount {
                 let data = int32Data[channel]
-                for i in 0..<frames {
-                    let sample = Float(data[i]) / 2147483648.0
+                for index in 0..<frames {
+                    let sample = Float(data[index]) / 2147483648.0
                     sum += sample * sample
                 }
             }

@@ -11,11 +11,11 @@ struct HUDView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 Spacer()
-                Button(action: { NSApp.terminate(nil) }) {
+                Button(action: { NSApp.terminate(nil) }, label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
                         .foregroundStyle(.secondary)
-                }
+                })
                 .buttonStyle(.plain)
             }
 
@@ -58,7 +58,7 @@ struct HUDView: View {
                         get: { audioManager.inputGain },
                         set: { audioManager.setInputGainFromUI($0) }
                     ), in: 0.1...1, step: 0.01)
-                    .onChange(of: audioManager.inputGain) { oldValue, newValue in
+                    .onChange(of: audioManager.inputGain) { _, newValue in
                         if newValue < 0.1 {
                             audioManager.setInputGainFromUI(0.1)
                         }

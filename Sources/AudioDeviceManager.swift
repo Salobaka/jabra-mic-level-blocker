@@ -46,7 +46,7 @@ final class AudioDeviceManager: ObservableObject {
 
     func refreshDevices() {
         let previousDevice = jabraDevice
-        if let device = findJabraDevice() {
+        if let device = AudioDeviceDiscovery.findJabraDevice() {
             let wasRunning = isRunning
             let deviceChanged = previousDevice != device.id
             jabraDevice = device.id
@@ -65,92 +65,6 @@ final class AudioDeviceManager: ObservableObject {
             }
             stopVolumeEnforcement()
         }
-    }
-
-    private func findJabraDevice() -> (id: AudioDeviceID, name: String)? {
-        var propertyAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDevices,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var size: UInt32 = 0
-        var status = AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &propertyAddress, 0, nil, &size)
-        guard status == noErr else { return nil }
-
-        let deviceCount = Int(size) / MemoryLayout<AudioDeviceID>.size
-        var deviceIDs = [AudioDeviceID](repeating: 0, count: deviceCount)
-        status = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &propertyAddress, 0, nil, &size, &deviceIDs)
-        guard status == noErr else { return nil }
-
-        // Prefer exact "85h" match, fallback to any Jabra Elite.
-        var fallback: (id: AudioDeviceID, name: String)?
-        for id in deviceIDs {
-            guard let name = getDeviceName(id: id) else { continue }
-            guard getInputChannels(id: id) > 0 else { continue }
-            guard isBluetoothDevice(id: id) else { continue }
-            let lower = name.lowercased()
-            guard lower.contains("jabra") else { continue }
-            if lower.contains("85h") {
-                return (id, name)
-            }
-            if lower.contains("elite") && fallback == nil {
-                fallback = (id, name)
-            }
-        }
-        return fallback
-    }
-
-    private func isBluetoothDevice(id: AudioDeviceID) -> Bool {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyTransportType,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        guard AudioObjectHasProperty(id, &address) else { return false }
-        var transportType: UInt32 = 0
-        var size = UInt32(MemoryLayout<UInt32>.size)
-        let status = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &transportType)
-        guard status == noErr else { return false }
-        return transportType == kAudioDeviceTransportTypeBluetooth
-            || transportType == kAudioDeviceTransportTypeBluetoothLE
-    }
-
-    private func getDeviceName(id: AudioDeviceID) -> String? {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioObjectPropertyName,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var cfName: CFString? = nil
-        var size = UInt32(MemoryLayout<CFString?>.size)
-        let status = withUnsafeMutablePointer(to: &cfName) { namePtr in
-            AudioObjectGetPropertyData(id, &address, 0, nil, &size, namePtr)
-        }
-        guard status == noErr, let name = cfName else { return nil }
-        return name as String
-    }
-
-    private func getInputChannels(id: AudioDeviceID) -> Int {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyStreamConfiguration,
-            mScope: kAudioDevicePropertyScopeInput,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var size: UInt32 = 0
-        var status = AudioObjectGetPropertyDataSize(id, &address, 0, nil, &size)
-        guard status == noErr else { return 0 }
-
-        let bufferList = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: Int(size))
-        defer { bufferList.deallocate() }
-        status = AudioObjectGetPropertyData(id, &address, 0, nil, &size, bufferList)
-        guard status == noErr else { return 0 }
-
-        var channels = 0
-        let buffers = UnsafeMutableAudioBufferListPointer(bufferList)
-        for buffer in buffers {
-            channels += Int(buffer.mNumberChannels)
-        }
-        return channels
     }
 
     // MARK: - Gain helpers
