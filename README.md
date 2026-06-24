@@ -27,6 +27,12 @@ This menu-bar tool keeps the Jabra input gain at a safe minimum level and active
 - Jabra Elite 85h paired and available as an audio input device
 - Microphone permission (the app prompts on first launch)
 
+## Tested on
+
+- Apple Silicon M3 Max / M3 Ultra / M4
+- macOS Sequoia
+- macOS Tahoe 26.3.1
+
 ## Build
 
 ```bash
