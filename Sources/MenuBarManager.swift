@@ -1,10 +1,20 @@
 import Cocoa
 import SwiftUI
 
-class MenuBarManager: NSObject, NSPopoverDelegate {
+final class MenuBarManager: NSObject, NSPopoverDelegate {
     private let statusItem: NSStatusItem
     private let popover: NSPopover
     private let audioManager: AudioDeviceManager
+
+    // Reusable 1×pt symbol image for compositing.
+    private let baseSymbol = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: nil)
+
+    // Lightweight breathing state. Updated at only 10 Hz.
+    private var displayLink: CVDisplayLink?
+    private var phase: Double = 0
+    private let breathingPeriod: Double = 3.0
+    private let updateInterval: Double = 0.1
+    private var accumulator: Double = 0
 
     init(audioManager: AudioDeviceManager) {
         self.audioManager = audioManager
@@ -12,13 +22,21 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
         self.popover = NSPopover()
         super.init()
         setup()
+        setupDisplayLink()
+    }
+
+    deinit {
+        if let displayLink = displayLink {
+            CVDisplayLinkStop(displayLink)
+        }
     }
 
     private func setup() {
-        statusItem.button?.image = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Jabra Input")
         statusItem.button?.imagePosition = .imageOnly
         statusItem.button?.action = #selector(togglePopover)
         statusItem.button?.target = self
+
+        updateIcon(alpha: 0)
 
         let hostingView = NSHostingView(rootView: HUDView(audioManager: self.audioManager))
         hostingView.frame = NSRect(x: 0, y: 0, width: 280, height: 240)
@@ -30,6 +48,69 @@ class MenuBarManager: NSObject, NSPopoverDelegate {
         popover.contentSize = NSSize(width: 280, height: 240)
         popover.behavior = .transient
         popover.delegate = self
+    }
+
+    private func setupDisplayLink() {
+        let pointer = Unmanaged.passUnretained(self).toOpaque()
+        let callback: CVDisplayLinkOutputCallback = { _, _, _, _, _, userInfo in
+            guard let userInfo = userInfo else { return kCVReturnSuccess }
+            let manager = Unmanaged<MenuBarManager>.fromOpaque(userInfo).takeUnretainedValue()
+            manager.tick()
+            return kCVReturnSuccess
+        }
+
+        var link: CVDisplayLink?
+        CVDisplayLinkCreateWithActiveCGDisplays(&link)
+        if let link = link {
+            CVDisplayLinkSetOutputCallback(link, callback, pointer)
+            CVDisplayLinkStart(link)
+            displayLink = link
+        }
+    }
+
+    private func tick() {
+        accumulator += 1.0 / 60.0
+        guard accumulator >= updateInterval else { return }
+        accumulator = 0
+
+        // Sine-wave breathing between 0.25 and 0.55 alpha.
+        let normalized = (sin(phase) + 1) / 2
+        let alpha = 0.25 + (normalized * 0.30)
+
+        DispatchQueue.main.async { [weak self] in
+            self?.updateIcon(alpha: alpha)
+        }
+
+        phase += (2 * .pi) * (updateInterval / breathingPeriod)
+        if phase > 2 * .pi { phase -= 2 * .pi }
+    }
+
+    private func updateIcon(alpha: Double) {
+        guard let button = statusItem.button,
+              let baseSymbol = baseSymbol else { return }
+
+        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+            .applying(.init(hierarchicalColor: .systemOrange))
+        let colored = baseSymbol.withSymbolConfiguration(config) ?? baseSymbol
+
+        let size = colored.size
+        let result = NSImage(size: size)
+        result.lockFocus()
+        colored.draw(in: NSRect(origin: .zero, size: size))
+
+        let overlay = NSImage(size: size)
+        overlay.lockFocus()
+        NSColor.systemOrange.withAlphaComponent(alpha).setFill()
+        NSRect(origin: .zero, size: size).fill()
+        overlay.unlockFocus()
+
+        overlay.draw(in: NSRect(origin: .zero, size: size),
+                     from: NSRect(origin: .zero, size: size),
+                     operation: .sourceAtop,
+                     fraction: 1.0)
+        result.unlockFocus()
+
+        button.image = result
     }
 
     @objc private func togglePopover() {
