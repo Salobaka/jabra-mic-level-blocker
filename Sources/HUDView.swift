@@ -58,7 +58,7 @@ struct HUDView: View {
                         get: { audioManager.inputGain },
                         set: { audioManager.setInputGainFromUI($0) }
                     ), in: 0.1...1, step: 0.01)
-                    .onChange(of: audioManager.inputGain) { newValue in
+                    .onChange(of: audioManager.inputGain) { oldValue, newValue in
                         if newValue < 0.1 {
                             audioManager.setInputGainFromUI(0.1)
                         }

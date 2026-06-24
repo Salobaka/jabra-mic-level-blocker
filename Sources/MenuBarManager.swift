@@ -6,15 +6,12 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
     private let popover: NSPopover
     private let audioManager: AudioDeviceManager
 
-    // Reusable 1×pt symbol image for compositing.
     private let baseSymbol = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: nil)
+    private var timer: Timer?
 
     // Lightweight breathing state. Updated at only 10 Hz.
-    private var displayLink: CVDisplayLink?
     private var phase: Double = 0
     private let breathingPeriod: Double = 3.0
-    private let updateInterval: Double = 0.1
-    private var accumulator: Double = 0
 
     init(audioManager: AudioDeviceManager) {
         self.audioManager = audioManager
@@ -22,13 +19,11 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         self.popover = NSPopover()
         super.init()
         setup()
-        setupDisplayLink()
+        startTimer()
     }
 
     deinit {
-        if let displayLink = displayLink {
-            CVDisplayLinkStop(displayLink)
-        }
+        stopTimer()
     }
 
     private func setup() {
@@ -50,38 +45,24 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         popover.delegate = self
     }
 
-    private func setupDisplayLink() {
-        let pointer = Unmanaged.passUnretained(self).toOpaque()
-        let callback: CVDisplayLinkOutputCallback = { _, _, _, _, _, userInfo in
-            guard let userInfo = userInfo else { return kCVReturnSuccess }
-            let manager = Unmanaged<MenuBarManager>.fromOpaque(userInfo).takeUnretainedValue()
-            manager.tick()
-            return kCVReturnSuccess
-        }
-
-        var link: CVDisplayLink?
-        CVDisplayLinkCreateWithActiveCGDisplays(&link)
-        if let link = link {
-            CVDisplayLinkSetOutputCallback(link, callback, pointer)
-            CVDisplayLinkStart(link)
-            displayLink = link
+    private func startTimer() {
+        stopTimer()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            self?.tick()
         }
     }
 
-    private func tick() {
-        accumulator += 1.0 / 60.0
-        guard accumulator >= updateInterval else { return }
-        accumulator = 0
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
 
-        // Sine-wave breathing between 0.25 and 0.55 alpha.
+    private func tick() {
         let normalized = (sin(phase) + 1) / 2
         let alpha = 0.25 + (normalized * 0.30)
+        updateIcon(alpha: alpha)
 
-        DispatchQueue.main.async { [weak self] in
-            self?.updateIcon(alpha: alpha)
-        }
-
-        phase += (2 * .pi) * (updateInterval / breathingPeriod)
+        phase += (2 * .pi) * (0.1 / breathingPeriod)
         if phase > 2 * .pi { phase -= 2 * .pi }
     }
 
