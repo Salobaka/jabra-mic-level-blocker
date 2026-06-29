@@ -60,11 +60,14 @@ final class AudioDeviceManager: ObservableObject {
     // MARK: - Device discovery
 
     func refreshDevices() {
+        AppLogger.shared.log("refreshDevices called")
         let previousDevice = jabraDevice
         if let device = AudioDeviceDiscovery.findJabraDevice() {
             let wasRunning = isRunning
             let deviceChanged = previousDevice != device.id
             let isFirstDiscovery = previousDevice == nil
+
+            AppLogger.shared.log("Found Jabra device: \(device.name) (id=\(device.id), first=\(isFirstDiscovery), changed=\(deviceChanged))")
 
             jabraDevice = device.id
             jabraName = device.name
@@ -84,9 +87,11 @@ final class AudioDeviceManager: ObservableObject {
             applyTargetGain()
 
             if wasRunning && deviceChanged {
+                AppLogger.shared.log("Device changed while running, restarting metering")
                 startMetering()
             }
         } else {
+            AppLogger.shared.log("No Jabra device found")
             jabraDevice = nil
             gainIsWritable = false
             if isRunning {
@@ -243,6 +248,8 @@ final class AudioDeviceManager: ObservableObject {
         }
 
         guard abs(current - target) > Self.gainTolerance else { return }
+
+        AppLogger.shared.log("Enforcing gain: current=\(current), target=\(target), userTarget=\(userTarget), locked=\(lockVolume)")
 
         isReapplyingVolume = true
         setInputGain(target, for: device)
