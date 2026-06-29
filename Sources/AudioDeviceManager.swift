@@ -18,8 +18,10 @@ final class AudioDeviceManager: ObservableObject {
     @Published var lockVolume: Bool = true
     @Published var showDockIcon: Bool = true {
         didSet {
-            applyDockIconPolicy()
             UserDefaults.standard.set(showDockIcon, forKey: "showDockIcon")
+            // setActivationPolicy must be set before the app finishes launching;
+            // changing it at runtime is unsupported and can crash. Apply at next launch.
+            AppLogger.shared.log("Dock icon preference changed to \(showDockIcon), restart required")
         }
     }
     @Published var authorizationStatus: MicrophoneAuthorization = MicrophonePermission.shared.status
@@ -34,14 +36,15 @@ final class AudioDeviceManager: ObservableObject {
 
     init() {
         showDockIcon = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? true
+        applyDockIconPolicy()
         refreshDevices()
         setupDeviceChangeListener()
-        applyDockIconPolicy()
     }
 
     private func applyDockIconPolicy() {
         let policy: NSApplication.ActivationPolicy = showDockIcon ? .regular : .accessory
         NSApplication.shared.setActivationPolicy(policy)
+        AppLogger.shared.log("Applied activation policy: \(showDockIcon ? "regular" : "accessory")")
     }
 
     // MARK: - Permission

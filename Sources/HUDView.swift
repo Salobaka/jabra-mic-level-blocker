@@ -48,7 +48,7 @@ struct HUDView: View {
                 ))
                 .font(.system(size: 12))
 
-                Toggle("Show Dock icon", isOn: Binding(
+                Toggle("Show Dock icon (restart required)", isOn: Binding(
                     get: { audioManager.showDockIcon },
                     set: { audioManager.showDockIcon = $0 }
                 ))

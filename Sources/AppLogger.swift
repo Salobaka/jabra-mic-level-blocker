@@ -18,10 +18,10 @@ final class AppLogger {
         }
     }
 
-    func log(_ message: String, level: String = "INFO") {
+    func log(_ message: String, level: String = "INFO", synchronous: Bool = false) {
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let line = "[\(timestamp)] [\(level)] \(message)\n"
-        queue.async { [weak self] in
+        let write = { [weak self] in
             guard let self = self else { return }
             if let data = line.data(using: .utf8) {
                 if FileManager.default.fileExists(atPath: self.logFile.path) {
@@ -34,6 +34,11 @@ final class AppLogger {
                     try? data.write(to: self.logFile)
                 }
             }
+        }
+        if synchronous {
+            queue.sync(execute: write)
+        } else {
+            queue.async(execute: write)
         }
     }
 
