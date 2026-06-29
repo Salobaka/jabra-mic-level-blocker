@@ -12,6 +12,7 @@ final class AudioDeviceManager: ObservableObject {
     @Published var jabraDevice: AudioDeviceID?
     @Published var jabraName: String = "Jabra Elite 85h"
     @Published var inputGain: Double = 0.5
+    @Published var currentDeviceGain: Double = 0.5
     @Published var isRunning: Bool = false
     @Published var level: Float = 0.0
     @Published var lockVolume: Bool = true
@@ -63,11 +64,25 @@ final class AudioDeviceManager: ObservableObject {
         if let device = AudioDeviceDiscovery.findJabraDevice() {
             let wasRunning = isRunning
             let deviceChanged = previousDevice != device.id
+            let isFirstDiscovery = previousDevice == nil
+
             jabraDevice = device.id
             jabraName = device.name
-            inputGain = Double(getInputGain(for: device.id))
             gainIsWritable = deviceSupportsGain(device.id)
+
+            // On first discovery, seed the user target from the device's current gain.
+            // After that, preserve the user's target; do not let other apps corrupt it.
+            let deviceGain = Double(getInputGain(for: device.id))
+            currentDeviceGain = deviceGain
+            if isFirstDiscovery {
+                inputGain = max(deviceGain, Double(Self.minimumGain))
+            }
+
             updateVolumeEnforcement()
+
+            // Re-apply the target immediately whenever a device appears or reappears.
+            applyTargetGain()
+
             if wasRunning && deviceChanged {
                 startMetering()
             }
@@ -171,10 +186,16 @@ final class AudioDeviceManager: ObservableObject {
     }
 
     func setInputGainFromUI(_ value: Double) {
-        inputGain = value
-        if let device = jabraDevice {
-            setInputGain(Float(value), for: device)
-        }
+        inputGain = max(value, Double(Self.minimumGain))
+        applyTargetGain()
+    }
+
+    private func applyTargetGain() {
+        guard let device = jabraDevice else { return }
+        let target = Float(inputGain)
+        setInputGain(target, for: device)
+        // Reflect what the device actually reports without changing the user target.
+        currentDeviceGain = Double(getInputGain(for: device))
     }
 
     func setLockVolume(_ value: Bool) {
@@ -216,13 +237,15 @@ final class AudioDeviceManager: ObservableObject {
         // If locked, keep the user-selected level; otherwise still enforce minimum.
         let target: Float = lockVolume ? desiredTarget : max(current, Self.minimumGain)
 
+        // Update the displayed current gain without corrupting the user target.
+        DispatchQueue.main.async { [weak self] in
+            self?.currentDeviceGain = Double(current)
+        }
+
         guard abs(current - target) > Self.gainTolerance else { return }
 
         isReapplyingVolume = true
         setInputGain(target, for: device)
-        DispatchQueue.main.async { [weak self] in
-            self?.inputGain = Double(self?.getInputGain(for: device) ?? target)
-        }
         isReapplyingVolume = false
     }
 
@@ -238,6 +261,7 @@ final class AudioDeviceManager: ObservableObject {
         stopMetering()
         previousDefaultInput = getDefaultInputDevice()
         setDefaultInputDevice(device)
+        applyTargetGain()
 
         // Give CoreAudio a moment to propagate the default-input change before
         // AVAudioEngine initializes its input node. This avoids the engine
