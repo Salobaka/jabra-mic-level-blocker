@@ -88,14 +88,83 @@ struct HUDView: View {
                         .foregroundStyle(.orange)
                         .multilineTextAlignment(.center)
                 }
+
+                DisconnectButton(audioManager: audioManager)
             } else {
-                Text("Connect Jabra Elite 85h")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    Text("Connect Jabra Elite 85h")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ConnectButton(audioManager: audioManager)
+                }
             }
         }
         .padding()
         .frame(width: 280)
+    }
+}
+
+struct ConnectButton: View {
+    @StateObject var audioManager: AudioDeviceManager
+    @State private var lastResult: String?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Button {
+                let result = BluetoothController.connectJabra()
+                lastResult = result
+                if result == nil {
+                    audioManager.refreshDevices()
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "bolt.horizontal")
+                    Text("Connect Jabra Elite 85h")
+                }
+                .font(.system(size: 12))
+            }
+            .controlSize(.small)
+            .disabled(BluetoothController.isJabraConnected)
+
+            if let lastResult = lastResult {
+                Text(lastResult)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+}
+
+struct DisconnectButton: View {
+    @StateObject var audioManager: AudioDeviceManager
+    @State private var lastResult: String?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Button {
+                let result = BluetoothController.disconnectJabra()
+                lastResult = result
+                if result == nil {
+                    audioManager.refreshDevices()
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "bolt.horizontal.fill")
+                    Text("Disconnect Jabra Elite 85h")
+                }
+                .font(.system(size: 12))
+            }
+            .controlSize(.small)
+            .disabled(!BluetoothController.isJabraConnected)
+
+            if let lastResult = lastResult {
+                Text(lastResult)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
     }
 }
 

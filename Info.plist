@@ -24,6 +24,8 @@
     <false/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Jabra Input Tracker needs microphone access to display the input level meter for your Jabra headset.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Jabra Input Tracker needs Bluetooth access to disconnect your Jabra headset on request.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

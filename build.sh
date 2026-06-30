@@ -12,6 +12,7 @@ swiftc -O -whole-module-optimization \
     -framework Cocoa \
     -framework AVFoundation \
     -framework CoreAudio \
+    -framework IOBluetooth \
     Sources/*.swift \
     -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
