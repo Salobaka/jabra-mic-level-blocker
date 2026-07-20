@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>JabraInputTracker</string>
     <key>CFBundleIdentifier</key>
-    <string>com.yourcompany.JabraInputTracker</string>
+    <string>com.salobaka.jabrainputtracker</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -21,11 +21,11 @@
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSUIElement</key>
-    <false/>
+    <true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Jabra Input Tracker needs microphone access to display the input level meter for your Jabra headset.</string>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Jabra Input Tracker needs Bluetooth access to disconnect your Jabra headset on request.</string>
+    <string>Jabra Input Tracker needs Bluetooth access to detect and manage your Jabra Elite 85h and Daisy One headsets.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

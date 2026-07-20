@@ -6,6 +6,7 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
     private let statusItem: NSStatusItem
     private let popover: NSPopover
     private let audioManager: AudioDeviceManager
+    private let daisyController: DaisyMuteController
 
     private let baseSymbol = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: nil)
     private let lockSymbol = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
@@ -15,8 +16,9 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
     private var phase: Double = 0
     private let breathingPeriod: Double = 3.0
 
-    init(audioManager: AudioDeviceManager) {
+    init(audioManager: AudioDeviceManager, daisyController: DaisyMuteController) {
         self.audioManager = audioManager
+        self.daisyController = daisyController
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.popover = NSPopover()
         super.init()
@@ -36,7 +38,9 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
 
         updateIcon(alpha: 0)
 
-        let hostingView = NSHostingView(rootView: HUDView(audioManager: self.audioManager))
+        let hostingView = NSHostingView(rootView: HUDView(audioManager: self.audioManager, daisyController: self.daisyController, onClose: { [weak self] in
+            self?.closePopover()
+        }))
         hostingView.frame = NSRect(x: 0, y: 0, width: 280, height: 240)
 
         let viewController = NSViewController()

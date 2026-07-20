@@ -3,6 +3,8 @@ import AppKit
 
 struct HUDView: View {
     @StateObject var audioManager: AudioDeviceManager
+    @StateObject var daisyController: DaisyMuteController
+    var onClose: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 12) {
@@ -11,7 +13,7 @@ struct HUDView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 Spacer()
-                Button(action: { NSApp.terminate(nil) }, label: {
+                Button(action: onClose, label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
                         .foregroundStyle(.secondary)
@@ -97,6 +99,11 @@ struct HUDView: View {
                         .foregroundStyle(.secondary)
                     ConnectButton(audioManager: audioManager)
                 }
+            }
+
+            if daisyController.isDaisyPaired {
+                Divider()
+                DaisySection(controller: daisyController)
             }
         }
         .padding()
@@ -187,5 +194,58 @@ struct LevelBar: View {
         if level < 0.6 { return .green }
         if level < 0.85 { return .yellow }
         return .red
+    }
+}
+
+struct DaisySection: View {
+    @ObservedObject var controller: DaisyMuteController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: controller.isDaisyConnected ? "headphones" : "headphones.circle")
+                    .foregroundStyle(controller.isDaisyConnected ? .green : .secondary)
+                Text(controller.isDaisyConnected ? "\(controller.daisyName) connected" : "\(controller.daisyName) not connected")
+                    .font(.system(size: 12, weight: .medium))
+                Spacer()
+            }
+
+            HStack {
+                Image(systemName: controller.isMuted ? "mic.slash.fill" : "mic.fill")
+                    .foregroundStyle(controller.isMuted ? .red : .green)
+                Text(controller.isMuted ? "Muted" : "Unmuted")
+                    .font(.system(size: 12))
+                Spacer()
+            }
+
+            if !controller.isTapActive {
+                HStack(alignment: .top, spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Input Monitoring permission required for the headset button to work.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Button("Open System Settings") {
+                            controller.openInputMonitoringSettings()
+                        }
+                        .font(.caption2)
+                        .controlSize(.small)
+                    }
+                }
+            }
+
+            Button {
+                controller.toggleMute()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: controller.isMuted ? "mic" : "mic.slash")
+                    Text(controller.isMuted ? "Unmute" : "Mute")
+                }
+                .font(.system(size: 12))
+            }
+            .controlSize(.small)
+            .disabled(!controller.isDaisyConnected)
+        }
     }
 }
