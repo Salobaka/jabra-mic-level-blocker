@@ -32,54 +32,91 @@ This menu-bar tool keeps the Jabra input gain at a safe minimum level and active
 ## Tested on
 
 - Apple Silicon M3 Max / M3 Ultra / M4
-- macOS Sequoia
+- macOS Sonoma 14.x
+- macOS Sequoia 15.x
 - macOS Tahoe 26.3.1
 
-## Install a pre-built bundle
+## Quick start (macOS Sequoia / Sonoma)
 
-If you received a `JabraInputTracker.zip`:
+End-to-end setup for any macOS user on Sonoma 14 or Sequoia 15 / Tahoe 26. No keychain actions, no paid developer account, no notarization.
 
-1. Unzip it.
-2. Strip the Gatekeeper quarantine attribute (no keychain, no notarization needed):
-   ```bash
-   xattr -cr JabraInputTracker.app
-   ```
-3. (Optional) Drag `JabraInputTracker.app` to `/Applications`.
-4. Launch:
-   ```bash
-   open JabraInputTracker.app
-   ```
-5. First launch prompts for Microphone, Bluetooth, and Input Monitoring. Grant once. Permissions persist forever for this exact binary.
+### Path A — Install a pre-built bundle (easiest)
 
-## Build from source
+Use this if you received `JabraInputTracker.zip` and do not want to build from source.
 
-1. Clone the repo:
-   ```bash
-   git clone <repo-url> jabra-input-tracker
-   cd jabra-input-tracker
-   ```
-2. Build:
-   ```bash
-   ./build.sh
-   ```
-   This compiles with `swiftc -O`, ad-hoc signs the bundle, and produces `.build/JabraInputTracker.app`.
-3. Run:
-   ```bash
-   open .build/JabraInputTracker.app
-   ```
-4. First launch prompts for Microphone, Bluetooth, and Input Monitoring. Grant once.
-5. To install to `/Applications` (strips quarantine and re-signs in place):
-   ```bash
-   ./install.sh
-   open /Applications/JabraInputTracker.app
-   ```
+```bash
+# 1. Unzip
+unzip JabraInputTracker.zip
 
-## Permissions
+# 2. Strip Gatekeeper quarantine (one-time, no admin password)
+xattr -cr JabraInputTracker.app
 
-- **Microphone** and **Bluetooth**: granted once per Mac, persist across rebuilds.
-- **Input Monitoring**: granted once per Mac, **resets after every rebuild** because the app is ad-hoc signed (no stable code-signing identity, no keychain actions required). Re-grant in *System Settings → Privacy & Security → Input Monitoring* after each `./build.sh`.
+# 3. (Optional) Move to /Applications
+mv JabraInputTracker.app /Applications/
 
-If the Daisy mute button stops working after a rebuild, re-grant Input Monitoring and relaunch the app.
+# 4. Launch
+open /Applications/JabraInputTracker.app
+```
+
+On first launch, macOS prompts for:
+- **Microphone** → Allow
+- **Bluetooth** → Allow
+- **Input Monitoring** → Open *System Settings* → toggle **JabraInputTracker** on
+
+> Sequoia / Sonoma path: *System Settings → Privacy & Security → Input Monitoring*.
+> If the toggle is missing, click the `+` and add `/Applications/JabraInputTracker.app`.
+
+Done. The menu-bar mic icon appears. Permissions persist for this exact binary.
+
+### Path B — Build from source
+
+Use this if you want the latest code or are on a Mac without a pre-built bundle.
+
+```bash
+# 1. Install Xcode Command Line Tools (one-time, ~200 MB)
+xcode-select --install
+
+# 2. Clone
+git clone https://github.com/Salobaka/jabra-mic-level-blocker.git jabra-input-tracker
+cd jabra-input-tracker
+
+# 3. Build (compiles + ad-hoc signs)
+./build.sh
+
+# 4. Launch
+open .build/JabraInputTracker.app
+```
+
+On first launch, grant Microphone, Bluetooth, and Input Monitoring as in Path A.
+
+> After each `./build.sh`, **re-grant Input Monitoring** because the ad-hoc signature changes. Microphone and Bluetooth persist.
+
+### Path C — Build and install to /Applications
+
+```bash
+xcode-select --install
+git clone https://github.com/Salobaka/jabra-mic-level-blocker.git jabra-input-tracker
+cd jabra-input-tracker
+./build.sh
+./install.sh
+open /Applications/JabraInputTracker.app
+```
+
+`install.sh` copies the bundle to `/Applications`, strips quarantine, re-signs, and launches.
+
+## Permissions (macOS Sequoia / Sonoma)
+
+All three permissions are granted once per Mac. Path:
+
+*System Settings → Privacy & Security*
+
+- **Microphone** → *Microphone* → toggle **JabraInputTracker** on. Persists across rebuilds.
+- **Bluetooth** → *Bluetooth* → toggle **JabraInputTracker** on. Persists across rebuilds.
+- **Input Monitoring** → *Input Monitoring* → toggle **JabraInputTracker** on. **Resets after every rebuild** because the app is ad-hoc signed (no keychain, no paid cert). Re-grant after each `./build.sh`.
+
+If a toggle is missing from the list, click `+` and add the `.app` manually.
+
+For pre-built bundles (Path A), all three permissions persist forever for that exact binary.
 
 ## Manual
 
