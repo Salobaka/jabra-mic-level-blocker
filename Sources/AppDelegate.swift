@@ -3,14 +3,12 @@ import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     let audioManager = AudioDeviceManager()
-    let daisyController = DaisyMuteController()
     let floatingPanel = FloatingPanelController()
     var menuBarManager: MenuBarManager?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildMenu()
-        daisyController.startMonitoring()
-        menuBarManager = MenuBarManager(audioManager: audioManager, daisyController: daisyController)
+        menuBarManager = MenuBarManager(audioManager: audioManager)
         showHUD()
         observeReactivation()
     }
@@ -42,7 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func showHUD() {
-        floatingPanel.show(rootView: HUDView(audioManager: self.audioManager, daisyController: self.daisyController, onClose: { [weak self] in
+        floatingPanel.show(rootView: HUDView(audioManager: self.audioManager, onClose: { [weak self] in
             self?.hideHUD()
         }))
     }

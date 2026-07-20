@@ -3,7 +3,6 @@ import AppKit
 
 struct HUDView: View {
     @StateObject var audioManager: AudioDeviceManager
-    @StateObject var daisyController: DaisyMuteController
     var onClose: () -> Void = {}
     var onQuit: () -> Void = { NSApp.terminate(nil) }
 
@@ -22,7 +21,7 @@ struct HUDView: View {
                 .buttonStyle(.plain)
             }
 
-            PermissionsSection(audioManager: audioManager, daisyController: daisyController)
+            PermissionsSection(audioManager: audioManager)
 
             if audioManager.jabraDevice != nil {
                 Toggle("Lock input level", isOn: Binding(
@@ -71,11 +70,6 @@ struct HUDView: View {
                         .foregroundStyle(.secondary)
                     ConnectButton(audioManager: audioManager)
                 }
-            }
-
-            if daisyController.isDaisyPaired {
-                Divider()
-                DaisySection(controller: daisyController)
             }
 
             Divider()
@@ -159,49 +153,11 @@ struct DisconnectButton: View {
     }
 }
 
-struct DaisySection: View {
-    @ObservedObject var controller: DaisyMuteController
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: controller.isDaisyConnected ? "headphones" : "headphones.circle")
-                    .foregroundStyle(controller.isDaisyConnected ? .green : .secondary)
-                Text(controller.isDaisyConnected ? "\(controller.daisyName) connected" : "\(controller.daisyName) not connected")
-                    .font(.system(size: 12, weight: .medium))
-                Spacer()
-            }
-
-            HStack {
-                Image(systemName: controller.isMuted ? "mic.slash.fill" : "mic.fill")
-                    .foregroundStyle(controller.isMuted ? .red : .green)
-                Text(controller.isMuted ? "Muted" : "Unmuted")
-                    .font(.system(size: 12))
-                Spacer()
-            }
-
-            Button {
-                controller.toggleMute()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: controller.isMuted ? "mic" : "mic.slash")
-                    Text(controller.isMuted ? "Unmute" : "Mute")
-                }
-                .font(.system(size: 12))
-            }
-            .controlSize(.small)
-            .disabled(!controller.isDaisyConnected)
-        }
-    }
-}
-
 struct PermissionsSection: View {
     @ObservedObject var audioManager: AudioDeviceManager
-    @ObservedObject var daisyController: DaisyMuteController
 
     private var allGranted: Bool {
-        audioManager.bluetoothPermission == .granted &&
-        daisyController.inputMonitoringStatus == .granted
+        audioManager.bluetoothPermission == .granted
     }
 
     var body: some View {
@@ -221,7 +177,6 @@ struct PermissionsSection: View {
                     Spacer()
                     Button {
                         audioManager.refreshBluetoothPermission()
-                        daisyController.refreshPermissions()
                     } label: {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 11))
@@ -246,25 +201,6 @@ struct PermissionsSection: View {
                         }
                     }
                 )
-
-                PermissionRow(
-                    icon: "dot.radiowaves.left.and.right",
-                    name: "Input Monitoring",
-                    status: daisyController.inputMonitoringStatus,
-                    actionTitle: "Open Settings",
-                    action: { daisyController.openInputMonitoringSettings() }
-                )
-
-                if daisyController.inputMonitoringStatus == .denied && !daisyController.currentCDHash.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Signature: \(daisyController.currentCDHash)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text("If permission was granted for a previous build, remove the old entry and re-add this one.")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                    }
-                }
             }
         }
     }

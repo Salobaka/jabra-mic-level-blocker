@@ -54,5 +54,5 @@ echo
 echo "NOTE: On Sequoia 15.7, TCC modals cannot be triggered automatically"
 echo "      (com.apple.provenance is system-enforced and cannot be removed)."
 echo "      Jabra gain control works immediately with NO permission."
-echo "      For Bluetooth and Input Monitoring, add the app manually:"
-echo "        System Settings → Privacy & Security → [Bluetooth / Input Monitoring] → +"
+echo "      For Bluetooth (device detect/connect), add the app manually:"
+echo "        System Settings → Privacy & Security → Bluetooth → +"
