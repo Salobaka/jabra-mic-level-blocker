@@ -260,16 +260,34 @@ struct PermissionsSection: View {
                     icon: "mic.fill",
                     name: "Microphone",
                     status: audioManager.microphonePermission,
-                    actionTitle: "Open Settings",
-                    action: { audioManager.requestMicrophoneAndOpenSettings() }
+                    actionTitle: audioManager.microphonePermission == .denied ? "Help" : "Open Settings",
+                    action: {
+                        if audioManager.microphonePermission == .denied {
+                            audioManager.resetTCCForMicrophone()
+                            audioManager.revealAppInFinder()
+                            audioManager.openMicrophoneSettings()
+                            audioManager.microphonePermission = .notDetermined
+                        } else {
+                            audioManager.requestMicrophoneAndOpenSettings()
+                        }
+                    }
                 )
 
                 PermissionRow(
                     icon: "antenna.radiowaves.left.and.right",
                     name: "Bluetooth",
                     status: audioManager.bluetoothPermission,
-                    actionTitle: "Open Settings",
-                    action: { audioManager.requestBluetoothAndOpenSettings() }
+                    actionTitle: audioManager.bluetoothPermission == .denied ? "Help" : "Open Settings",
+                    action: {
+                        if audioManager.bluetoothPermission == .denied {
+                            audioManager.resetTCCForBluetooth()
+                            audioManager.revealAppInFinder()
+                            audioManager.openBluetoothSettings()
+                            audioManager.bluetoothPermission = .notDetermined
+                        } else {
+                            audioManager.requestBluetoothAndOpenSettings()
+                        }
+                    }
                 )
 
                 PermissionRow(

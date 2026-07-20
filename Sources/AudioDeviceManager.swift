@@ -84,6 +84,22 @@ final class AudioDeviceManager: ObservableObject {
         }
     }
 
+    func revealAppInFinder() {
+        let bundleURL = Bundle.main.bundleURL
+        AppLogger.shared.log("Permissions: revealing \(bundleURL.path) in Finder")
+        NSWorkspace.shared.activateFileViewerSelecting([bundleURL])
+    }
+
+    func resetTCCForMicrophone() {
+        AppLogger.shared.log("Permissions: tccutil reset Microphone com.salobaka.jabrainputtracker")
+        Process.launchedProcess(launchPath: "/usr/bin/tccutil", arguments: ["reset", "Microphone", "com.salobaka.jabrainputtracker"])
+    }
+
+    func resetTCCForBluetooth() {
+        AppLogger.shared.log("Permissions: tccutil reset BluetoothAll com.salobaka.jabrainputtracker")
+        Process.launchedProcess(launchPath: "/usr/bin/tccutil", arguments: ["reset", "BluetoothAll", "com.salobaka.jabrainputtracker"])
+    }
+
     // MARK: - Device discovery
 
     func refreshDevices() {
