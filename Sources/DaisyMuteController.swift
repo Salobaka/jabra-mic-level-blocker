@@ -67,6 +67,10 @@ final class DaisyMuteController: ObservableObject {
     private var tapCreationAttempts: Int = 0
     private let maxTapCreationAttempts: Int = 3
     private var reactivationObserver: NSObjectProtocol?
+    private var inputMonitoringRetryTimer: Timer?
+    private var inputMonitoringRetryCount: Int = 0
+    private let maxInputMonitoringRetries: Int = 6
+    private let inputMonitoringRetryInterval: TimeInterval = 10.0
 
     init() {
         reactivationObserver = NotificationCenter.default.addObserver(
@@ -82,6 +86,7 @@ final class DaisyMuteController: ObservableObject {
         tapCreationAttempts = 0
         setupCGEventTap()
         startTapHealthCheck()
+        startInputMonitoringRetry()
         refreshDaisyState()
         setupDeviceChangeListener()
     }
@@ -91,7 +96,61 @@ final class DaisyMuteController: ObservableObject {
             AppLogger.shared.log("Daisy: app reactivated, retrying CGEventTap creation")
             tapCreationAttempts = 0
             inputMonitoringStatus = .notDetermined
+            inputMonitoringRetryCount = 0
             setupCGEventTap()
+            DispatchQueue.main.async { [weak self] in
+                self?.isTapActive = self?.eventTap != nil
+            }
+            startInputMonitoringRetry()
+        }
+    }
+
+    private func startInputMonitoringRetry() {
+        stopInputMonitoringRetry()
+        guard eventTap == nil else { return }
+        inputMonitoringRetryTimer = Timer.scheduledTimer(
+            withTimeInterval: inputMonitoringRetryInterval,
+            repeats: true
+        ) { [weak self] _ in
+            self?.retryInputMonitoring()
+        }
+    }
+
+    private func stopInputMonitoringRetry() {
+        inputMonitoringRetryTimer?.invalidate()
+        inputMonitoringRetryTimer = nil
+    }
+
+    private func retryInputMonitoring() {
+        guard eventTap == nil else {
+            stopInputMonitoringRetry()
+            return
+        }
+        inputMonitoringRetryCount += 1
+        if inputMonitoringRetryCount > maxInputMonitoringRetries {
+            AppLogger.shared.log("Daisy: Input Monitoring retry exhausted after \(maxInputMonitoringRetries) attempts")
+            stopInputMonitoringRetry()
+            DispatchQueue.main.async { [weak self] in
+                self?.inputMonitoringStatus = .denied
+            }
+            return
+        }
+        AppLogger.shared.log("Daisy: periodic Input Monitoring retry \(inputMonitoringRetryCount)/\(maxInputMonitoringRetries)")
+        tapCreationAttempts = 0
+        setupCGEventTap()
+        if eventTap != nil {
+            stopInputMonitoringRetry()
+            AppLogger.shared.log("Daisy: Input Monitoring retry succeeded")
+        }
+    }
+
+    func refreshPermissions() {
+        if eventTap == nil {
+            tapCreationAttempts = 0
+            inputMonitoringRetryCount = 0
+            inputMonitoringStatus = .notDetermined
+            setupCGEventTap()
+            startInputMonitoringRetry()
             DispatchQueue.main.async { [weak self] in
                 self?.isTapActive = self?.eventTap != nil
             }
@@ -100,6 +159,7 @@ final class DaisyMuteController: ObservableObject {
 
     deinit {
         stopTapHealthCheck()
+        stopInputMonitoringRetry()
         if let observer = reactivationObserver {
             NotificationCenter.default.removeObserver(observer)
         }

@@ -240,8 +240,21 @@ struct PermissionsSection: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Permissions")
-                    .font(.system(size: 12, weight: .semibold))
+                HStack {
+                    Text("Permissions")
+                        .font(.system(size: 12, weight: .semibold))
+                    Spacer()
+                    Button {
+                        audioManager.refreshBluetoothPermission()
+                        audioManager.microphonePermission = MicrophonePermission.shared.status == .authorized ? .granted : (MicrophonePermission.shared.status == .denied ? .denied : .notDetermined)
+                        daisyController.refreshPermissions()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 PermissionRow(
                     icon: "mic.fill",

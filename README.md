@@ -83,19 +83,18 @@ xcode-select --install
 git clone https://github.com/Salobaka/jabra-mic-level-blocker.git jabra-input-tracker
 cd jabra-input-tracker
 
-# 3. Build (compiles + ad-hoc signs + strips provenance)
+# 3. Build (compiles + ad-hoc signs + auto-strips Sequoia provenance with sudo)
 ./build.sh
 
-# 4. Sequoia 15 only: strip provenance so the app appears in TCC lists
-sudo xattr -cr .build/JabraInputTracker.app
-
-# 5. Launch
+# 4. Launch
 open .build/JabraInputTracker.app
 ```
 
+`build.sh` automatically runs `sudo xattr -cr` to strip the Sequoia provenance attribute, which is required for TCC permission modals to appear. Enter your password when prompted during build.
+
 On first launch, grant Microphone, Bluetooth, and Input Monitoring as in Path A.
 
-> After each `./build.sh`, **re-grant Input Monitoring** because the ad-hoc signature changes. Microphone and Bluetooth persist. On Sequoia 15, also re-run `sudo xattr -cr` after each rebuild.
+> **After each `./build.sh`, ALL THREE permissions must be re-granted** because the ad-hoc signature changes (new cdhash). Click **Grant** on Microphone and Bluetooth in the HUD popover, and **Open Settings** for Input Monitoring.
 
 ### Path C — Build and install to /Applications
 
@@ -116,11 +115,13 @@ All three permissions are granted once per Mac. Path:
 
 *System Settings → Privacy & Security*
 
-- **Microphone** → *Microphone* → toggle **JabraInputTracker** on. Persists across rebuilds.
-- **Bluetooth** → *Bluetooth* → toggle **JabraInputTracker** on. Persists across rebuilds.
-- **Input Monitoring** → *Input Monitoring* → toggle **JabraInputTracker** on. **Resets after every rebuild** because the app is ad-hoc signed (no keychain, no paid cert). Re-grant after each `./build.sh`.
+- **Microphone** → *Microphone* → toggle **JabraInputTracker** on. **Resets after every rebuild** (ad-hoc signature changes).
+- **Bluetooth** → *Bluetooth* → toggle **JabraInputTracker** on. **Resets after every rebuild** (ad-hoc signature changes).
+- **Input Monitoring** → *Input Monitoring* → toggle **JabraInputTracker** on. **Resets after every rebuild** (ad-hoc signature changes).
 
 > **Important:** the Daisy One mute button requires **Input Monitoring**, not Accessibility. Accessibility is not used by this app. If you granted Accessibility by mistake, it has no effect — grant Input Monitoring instead.
+
+> **All three permissions reset after every `./build.sh`** because the app is ad-hoc signed (no keychain, no paid cert). The cdhash changes on each build, invalidating previous grants. This is a macOS security requirement, not a bug.
 
 If a toggle is missing from the list, click `+` and add the `.app` manually.
 

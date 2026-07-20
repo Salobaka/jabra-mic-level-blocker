@@ -21,21 +21,30 @@ final class MicrophonePermission {
 
     func request(completion: @escaping (MicrophoneAuthorization) -> Void) {
         let current = status
+        AppLogger.shared.log("Mic: requestAccess called, current status=\(current)")
         guard current == .notDetermined else {
+            AppLogger.shared.log("Mic: skipping request, status already \(current)")
             completion(current)
             return
         }
 
         let wasAccessory = NSApp.activationPolicy() == .accessory
         if wasAccessory {
+            AppLogger.shared.log("Mic: flipping to .regular for TCC modal")
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
         }
 
+        let startTime = Date()
         AVCaptureDevice.requestAccess(for: .audio) { granted in
+            let elapsed = Date().timeIntervalSince(startTime)
             DispatchQueue.main.async {
                 if wasAccessory {
                     NSApp.setActivationPolicy(.accessory)
+                }
+                AppLogger.shared.log("Mic: requestAccess returned granted=\(granted) in \(String(format: "%.0f", elapsed * 1000))ms")
+                if !granted && elapsed < 0.5 {
+                    AppLogger.shared.log("Mic: TCC refused without modal. Run: sudo xattr -cr <bundle> to strip provenance.")
                 }
                 completion(granted ? .authorized : .denied)
             }

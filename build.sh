@@ -41,11 +41,29 @@ codesign --force --deep --options runtime --sign - "$APP_BUNDLE" >/dev/null 2>&1
 
 xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
+if xattr "$APP_BUNDLE" 2>/dev/null | grep -q "com.apple.provenance"; then
+    echo
+    echo "Stripping Sequoia provenance attribute (requires your password)..."
+    if sudo -n xattr -cr "$APP_BUNDLE" 2>/dev/null; then
+        echo "Provenance stripped (cached sudo)."
+    elif [ -t 0 ]; then
+        sudo xattr -cr "$APP_BUNDLE"
+        if xattr "$APP_BUNDLE" 2>/dev/null | grep -q "com.apple.provenance"; then
+            echo "WARNING: provenance still present after sudo. TCC modals will not appear." >&2
+        else
+            echo "Provenance stripped."
+        fi
+    else
+        echo "WARNING: Cannot strip provenance in non-interactive mode." >&2
+        echo "  TCC modals will NOT appear until you run:" >&2
+        echo "  sudo xattr -cr '$APP_BUNDLE'" >&2
+    fi
+fi
+
 echo "Built: $APP_BUNDLE"
 echo "Run with: open '$APP_BUNDLE'"
 echo
-echo "NOTE: First launch on this Mac prompts for Microphone, Bluetooth, and Input Monitoring."
-echo "      Each rebuild re-signs ad-hoc, so Input Monitoring must be re-granted after every build."
-echo
-echo "Sequoia 15: if the app does not appear in the Input Monitoring list, run once:"
-echo "  sudo xattr -cr '$APP_BUNDLE'"
+echo "NOTE: Each rebuild re-signs ad-hoc (new cdhash), so ALL THREE permissions"
+echo "      (Microphone, Bluetooth, Input Monitoring) must be re-granted after every build."
+echo "  Microphone/Bluetooth: click Grant in the HUD popover."
+echo "  Input Monitoring: click Open Settings in the HUD, toggle on."
