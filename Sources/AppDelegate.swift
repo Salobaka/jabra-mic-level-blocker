@@ -22,7 +22,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             queue: .main
         ) { [weak self] _ in
             self?.audioManager.refreshBluetoothPermission()
-            self?.audioManager.microphonePermission = MicrophonePermission.shared.status == .authorized ? .granted : (MicrophonePermission.shared.status == .denied ? .denied : .notDetermined)
         }
     }
 
@@ -54,9 +53,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
-    }
-
-    func applicationWillTerminate(_ notification: Notification) {
-        audioManager.stopMetering()
     }
 }

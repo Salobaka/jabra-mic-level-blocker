@@ -1,6 +1,5 @@
 import Foundation
 import CoreAudio
-import AVFoundation
 import CoreAudioTypes
 import AudioToolbox
 import Cocoa
@@ -13,20 +12,13 @@ final class AudioDeviceManager: ObservableObject {
     @Published var jabraName: String = "Jabra Elite 85h"
     @Published var inputGain: Double = 0.5
     @Published var currentDeviceGain: Double = 0.5
-    @Published var isRunning: Bool = false
-    @Published var level: Float = 0.0
     @Published var lockVolume: Bool = true
-    @Published var authorizationStatus: MicrophoneAuthorization = MicrophonePermission.shared.status
-    @Published var microphonePermission: PermissionStatus = MicrophonePermission.shared.status == .authorized ? .granted : (MicrophonePermission.shared.status == .denied ? .denied : .notDetermined)
     @Published var bluetoothPermission: PermissionStatus = BluetoothPermission.shared.status
     @Published var gainIsWritable: Bool = false
 
-    private var levelMeter: LevelMeter?
-    private var previousDefaultInput: AudioDeviceID?
     private var propertyListener: AudioObjectPropertyListenerBlock?
     private var volumeEnforcementTimer: Timer?
     private var isReapplyingVolume = false
-    private let queue = DispatchQueue(label: "com.jabrainputtracker.audio", qos: .userInitiated)
 
     init() {
         UserDefaults.standard.removeObject(forKey: "showDockIcon")
@@ -36,18 +28,6 @@ final class AudioDeviceManager: ObservableObject {
     }
 
     // MARK: - Permission
-
-    func requestMicrophoneAccess() {
-        MicrophonePermission.shared.request { [weak self] status in
-            DispatchQueue.main.async {
-                self?.authorizationStatus = status
-                self?.microphonePermission = status == .authorized ? .granted : .denied
-                if status == .authorized {
-                    self?.refreshDevices()
-                }
-            }
-        }
-    }
 
     func refreshBluetoothPermission() {
         bluetoothPermission = BluetoothPermission.shared.status
@@ -62,19 +42,8 @@ final class AudioDeviceManager: ObservableObject {
         }
     }
 
-    func openMicrophoneSettings() {
-        MicrophonePermission.shared.openSettings()
-    }
-
     func openBluetoothSettings() {
         BluetoothPermission.shared.openSettings()
-    }
-
-    func requestMicrophoneAndOpenSettings() {
-        requestMicrophoneAccess()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.openMicrophoneSettings()
-        }
     }
 
     func requestBluetoothAndOpenSettings() {
@@ -90,11 +59,6 @@ final class AudioDeviceManager: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([bundleURL])
     }
 
-    func resetTCCForMicrophone() {
-        AppLogger.shared.log("Permissions: tccutil reset Microphone com.salobaka.jabrainputtracker")
-        Process.launchedProcess(launchPath: "/usr/bin/tccutil", arguments: ["reset", "Microphone", "com.salobaka.jabrainputtracker"])
-    }
-
     func resetTCCForBluetooth() {
         AppLogger.shared.log("Permissions: tccutil reset BluetoothAll com.salobaka.jabrainputtracker")
         Process.launchedProcess(launchPath: "/usr/bin/tccutil", arguments: ["reset", "BluetoothAll", "com.salobaka.jabrainputtracker"])
@@ -106,7 +70,6 @@ final class AudioDeviceManager: ObservableObject {
         AppLogger.shared.log("refreshDevices called")
         let previousDevice = jabraDevice
         if let device = AudioDeviceDiscovery.findJabraDevice() {
-            let wasRunning = isRunning
             let deviceChanged = previousDevice != device.id
             let isFirstDiscovery = previousDevice == nil
 
@@ -128,18 +91,10 @@ final class AudioDeviceManager: ObservableObject {
 
             // Re-apply the target immediately whenever a device appears or reappears.
             applyTargetGain()
-
-            if wasRunning && deviceChanged {
-                AppLogger.shared.log("Device changed while running, restarting metering")
-                startMetering()
-            }
         } else {
             AppLogger.shared.log("No Jabra device found")
             jabraDevice = nil
             gainIsWritable = false
-            if isRunning {
-                stopMetering()
-            }
             stopVolumeEnforcement()
         }
     }
@@ -299,50 +254,7 @@ final class AudioDeviceManager: ObservableObject {
         isReapplyingVolume = false
     }
 
-    // MARK: - Default device switching
-
-    func startMetering() {
-        guard authorizationStatus == .authorized else {
-            requestMicrophoneAccess()
-            return
-        }
-        guard let device = jabraDevice else { return }
-
-        stopMetering()
-        previousDefaultInput = getDefaultInputDevice()
-        setDefaultInputDevice(device)
-        applyTargetGain()
-
-        // Give CoreAudio a moment to propagate the default-input change before
-        // AVAudioEngine initializes its input node. This avoids the engine
-        // caching the previous default format.
-        queue.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-            guard let self = self, self.jabraDevice == device else { return }
-
-            let meter = LevelMeter()
-            meter.levelUpdate = { [weak self] level in
-                DispatchQueue.main.async {
-                    self?.level = level
-                }
-            }
-            DispatchQueue.main.async { [weak self] in
-                self?.levelMeter = meter
-                self?.isRunning = true
-            }
-            meter.start()
-        }
-    }
-
-    func stopMetering() {
-        levelMeter?.stop()
-        levelMeter = nil
-        isRunning = false
-        level = 0
-        if let previous = previousDefaultInput {
-            setDefaultInputDevice(previous)
-            previousDefaultInput = nil
-        }
-    }
+    // MARK: - Device change listener
 
     private func setupDeviceChangeListener() {
         let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
@@ -363,29 +275,7 @@ final class AudioDeviceManager: ObservableObject {
         AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, nil, listener)
     }
 
-    private func getDefaultInputDevice() -> AudioDeviceID {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultInputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var deviceID: AudioDeviceID = 0
-        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
-        AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID)
-        return deviceID
-    }
-
-    private func setDefaultInputDevice(_ deviceID: AudioDeviceID) {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultInputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var device = deviceID
-        AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), &device)
-    }
-
     deinit {
-        stopMetering()
+        stopVolumeEnforcement()
     }
 }

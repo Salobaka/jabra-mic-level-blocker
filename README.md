@@ -13,13 +13,11 @@ This menu-bar tool keeps the Jabra input gain at a safe minimum level and active
 ## Features
 
 - Menu-bar icon with a popover containing all controls
-- Floating HUD with live mic level meter (Jabra Elite 85h)
 - Input gain fader from **10% to 100%** — set the mic level in percent, not arbitrary units
 - **10% minimum gain is always enforced** — you can never be accidentally muted to zero
 - **Unmute on every gain write** — clears the hardware/OS mute flag
 - **Lock input level** — re-applies the chosen gain 4× per second so apps like MS Teams, Kumospace, Zoom and Google Meet cannot pull the mic level down
-- Restores the previous default input device when the meter is turned off or the app quits
-- Explicit microphone permission handling for macOS
+- **No microphone permission required** — gain control uses CoreAudio property writes only
 - **Daisy One** support: detects the headset, intercepts the Play/Pause media key to toggle mute, and plays a feedback sound
 
 ## Requirements
@@ -27,7 +25,7 @@ This menu-bar tool keeps the Jabra input gain at a safe minimum level and active
 - macOS 12+
 - Xcode Command Line Tools (`xcode-select --install`)
 - Jabra Elite 85h and/or Daisy One paired and available as an audio input device
-- Microphone, Bluetooth, and Input Monitoring permissions (the app prompts on first launch)
+- Bluetooth and Input Monitoring permissions (see [Permissions](#permissions-macos-sequoia--sonoma))
 
 ## Tested on
 
@@ -58,9 +56,9 @@ mv JabraInputTracker.app /Applications/
 open /Applications/JabraInputTracker.app
 ```
 
-On first launch, the app appears in the menu bar. Open the popover and grant permissions (see [Permissions](#permissions-macos-sequoia--sonoma)):
+On first launch, the app appears in the menu bar. Jabra gain control works immediately — no permission needed. Open the popover and grant permissions for the optional features (see [Permissions](#permissions-macos-sequoia--sonoma)):
 
-For each permission (Microphone, Bluetooth, Input Monitoring):
+For each permission (Bluetooth, Input Monitoring):
 1. Click **Open Settings** in the HUD → System Settings opens to the pane
 2. Click `+` → select `JabraInputTracker.app` → toggle on
 3. Click back to the app → the badge flips green
@@ -105,7 +103,7 @@ open /Applications/JabraInputTracker.app
 
 ## Permissions (macOS Sequoia / Sonoma)
 
-All three permissions are required. On Sequoia 15.7, `com.apple.provenance` is system-enforced and **cannot be removed** (not even with `sudo xattr -cr`). TCC modals will not appear automatically. You must manually add the app to each TCC list.
+Two permissions are used. On Sequoia 15.7, `com.apple.provenance` is system-enforced and **cannot be removed** (not even with `sudo xattr -cr`). TCC modals will not appear automatically. You must manually add the app to each TCC list.
 
 *System Settings → Privacy & Security*
 
@@ -115,19 +113,20 @@ For each permission:
 3. Click `+` → select `JabraInputTracker.app` → toggle on
 4. Click back to the app (or click the ↻ refresh button) → the badge flips green
 
-- **Microphone** → required for the live input level meter
 - **Bluetooth** → required for Jabra/Daisy detection and connect/disconnect
 - **Input Monitoring** → required for the Daisy One Play/Pause → mute toggle
 
+**Microphone permission is NOT required.** Jabra gain control (slider, lock, 10% floor) uses CoreAudio property writes only, which need no TCC permission.
+
 > **Important:** the Daisy One mute button requires **Input Monitoring**, not Accessibility. Accessibility is not used by this app. If you granted Accessibility by mistake, remove it — it has no effect.
 
-> **All three permissions reset after every `./build.sh`** because the app is ad-hoc signed (no keychain, no paid cert). The cdhash changes on each build, invalidating previous grants. Remove old entries with `-` and re-add with `+`. This is a macOS security requirement, not a bug.
+> **Both permissions reset after every `./build.sh`** because the app is ad-hoc signed (no keychain, no paid cert). The cdhash changes on each build, invalidating previous grants. Remove old entries with `-` and re-add with `+`. This is a macOS security requirement, not a bug.
 
-For pre-built bundles (Path A), all three permissions persist forever for that exact binary.
+For pre-built bundles (Path A), both permissions persist forever for that exact binary.
 
 ### Why TCC modals don't appear (Sequoia 15.7)
 
-On Sequoia 15.7, the kernel attaches `com.apple.provenance` to every file and it cannot be removed — `xattr -cr` reports success but the attribute immediately reappears. When this attribute is present on an ad-hoc signed app, TCC silently refuses to show permission modals (`AVCaptureDevice.requestAccess` returns false instantly, `CGEvent.tapCreate` returns nil). The only workaround without a paid Developer ID or a self-signed keychain cert is manual `+` addition in System Settings.
+On Sequoia 15.7, the kernel attaches `com.apple.provenance` to every file and it cannot be removed — `xattr -cr` reports success but the attribute immediately reappears. When this attribute is present on an ad-hoc signed app, TCC silently refuses to show permission modals (`CGEvent.tapCreate` returns nil, and apps never register in the TCC list). The only workaround without a paid Developer ID or a self-signed keychain cert is manual `+` addition in System Settings.
 
 ## Manual
 
@@ -135,9 +134,9 @@ On Sequoia 15.7, the kernel attaches `com.apple.provenance` to every file and it
 
 1. Build or install the app (see [Install a pre-built bundle](#install-a-pre-built-bundle) or [Build from source](#build-from-source)).
 2. `open JabraInputTracker.app`.
-3. macOS prompts for **Microphone**, **Bluetooth**, and **Input Monitoring**. Grant all three.
-   - If you skip Input Monitoring, the Daisy One mute button will not work. Re-grant later in *System Settings → Privacy & Security → Input Monitoring*.
-4. A microphone icon appears in the menu bar. No Dock icon is shown (the app is a menu-bar agent).
+3. Jabra gain control works immediately — no permission needed.
+4. Grant **Bluetooth** and **Input Monitoring** via the HUD for the optional features (see [Permissions](#permissions-macos-sequoia--sonoma)).
+5. A microphone icon appears in the menu bar. No Dock icon is shown (the app is a menu-bar agent).
 
 ### Menu bar
 
@@ -146,7 +145,6 @@ On Sequoia 15.7, the kernel attaches `com.apple.provenance` to every file and it
 
 ### Jabra Elite 85h controls
 
-- **Show mic level**: toggles the live input level meter. The default input device is temporarily switched to the Jabra while metering is on.
 - **Lock input level**: re-applies your chosen gain 4× per second so Teams, Zoom, Meet, and Kumospace cannot pull it down.
 - **Gain slider**: sets the input gain from 10% to 100%. The 10% floor is always enforced.
 - **Connect / Disconnect Jabra Elite 85h**: pair or unpair over Bluetooth without opening System Settings.
@@ -200,12 +198,11 @@ rm -rf ~/Library/Logs/JabraInputTracker
 defaults delete com.salobaka.jabrainputtracker 2>/dev/null || true
 ```
 
-TCC permissions (Microphone, Bluetooth, Input Monitoring) can be revoked in *System Settings → Privacy & Security*.
+TCC permissions (Bluetooth, Input Monitoring) can be revoked in *System Settings → Privacy & Security*.
 
 ## How it works
 
 - Enumerates CoreAudio input devices and looks for a device whose name contains **"Jabra"** and **"85h"** or **"Elite"**.
-- When metering is enabled, it temporarily switches the default input device to the Jabra headset and reads the audio stream via `AVAudioEngine`.
 - Writes the device's input-gain scalar using CoreAudio and clears the hardware mute flag.
 - A background timer re-applies the selected gain every 250 ms when **Lock input level** is on.
 - Even with **Lock input level** off, the app still enforces the 10% floor.

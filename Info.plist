@@ -26,8 +26,6 @@
     <string>12.0</string>
     <key>LSUIElement</key>
     <true/>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Jabra Input Tracker needs microphone access to display the input level meter for your Jabra headset.</string>
     <key>NSBluetoothAlwaysUsageDescription</key>
     <string>Jabra Input Tracker needs Bluetooth access to detect and manage your Jabra Elite 85h and Daisy One headsets.</string>
     <key>NSHighResolutionCapable</key>

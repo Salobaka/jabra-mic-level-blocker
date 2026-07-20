@@ -24,27 +24,12 @@ struct HUDView: View {
 
             PermissionsSection(audioManager: audioManager, daisyController: daisyController)
 
-            if audioManager.microphonePermission == .granted && audioManager.jabraDevice != nil {
-                Toggle("Show mic level", isOn: Binding(
-                    get: { audioManager.isRunning },
-                    set: { newValue in
-                        if newValue {
-                            audioManager.startMetering()
-                        } else {
-                            audioManager.stopMetering()
-                        }
-                    }
-                ))
-                .font(.system(size: 12))
-
+            if audioManager.jabraDevice != nil {
                 Toggle("Lock input level", isOn: Binding(
                     get: { audioManager.lockVolume },
                     set: { audioManager.setLockVolume($0) }
                 ))
                 .font(.system(size: 12))
-
-                LevelBar(level: audioManager.level)
-                    .frame(height: 14)
 
                 HStack(spacing: 6) {
                     Image(systemName: "microphone")
@@ -174,28 +159,6 @@ struct DisconnectButton: View {
     }
 }
 
-struct LevelBar: View {
-    let level: Float
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.gray.opacity(0.25))
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(barColor)
-                    .frame(width: geo.size.width * CGFloat(level))
-            }
-        }
-    }
-
-    private var barColor: Color {
-        if level < 0.6 { return .green }
-        if level < 0.85 { return .yellow }
-        return .red
-    }
-}
-
 struct DaisySection: View {
     @ObservedObject var controller: DaisyMuteController
 
@@ -237,7 +200,6 @@ struct PermissionsSection: View {
     @ObservedObject var daisyController: DaisyMuteController
 
     private var allGranted: Bool {
-        audioManager.microphonePermission == .granted &&
         audioManager.bluetoothPermission == .granted &&
         daisyController.inputMonitoringStatus == .granted
     }
@@ -259,7 +221,6 @@ struct PermissionsSection: View {
                     Spacer()
                     Button {
                         audioManager.refreshBluetoothPermission()
-                        audioManager.microphonePermission = MicrophonePermission.shared.status == .authorized ? .granted : (MicrophonePermission.shared.status == .denied ? .denied : .notDetermined)
                         daisyController.refreshPermissions()
                     } label: {
                         Image(systemName: "arrow.clockwise")
@@ -268,23 +229,6 @@ struct PermissionsSection: View {
                     }
                     .buttonStyle(.plain)
                 }
-
-                PermissionRow(
-                    icon: "mic.fill",
-                    name: "Microphone",
-                    status: audioManager.microphonePermission,
-                    actionTitle: audioManager.microphonePermission == .denied ? "Help" : "Open Settings",
-                    action: {
-                        if audioManager.microphonePermission == .denied {
-                            audioManager.resetTCCForMicrophone()
-                            audioManager.revealAppInFinder()
-                            audioManager.openMicrophoneSettings()
-                            audioManager.microphonePermission = .notDetermined
-                        } else {
-                            audioManager.requestMicrophoneAndOpenSettings()
-                        }
-                    }
-                )
 
                 PermissionRow(
                     icon: "antenna.radiowaves.left.and.right",
