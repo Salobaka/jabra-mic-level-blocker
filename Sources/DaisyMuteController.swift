@@ -65,8 +65,17 @@ final class DaisyMuteController: ObservableObject {
 
     private var tapCreationAttempts: Int = 0
     private let maxTapCreationAttempts: Int = 3
+    private var reactivationObserver: NSObjectProtocol?
 
-    init() {}
+    init() {
+        reactivationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleReactivation()
+        }
+    }
 
     func startMonitoring() {
         tapCreationAttempts = 0
@@ -76,8 +85,22 @@ final class DaisyMuteController: ObservableObject {
         setupDeviceChangeListener()
     }
 
+    private func handleReactivation() {
+        if eventTap == nil {
+            AppLogger.shared.log("Daisy: app reactivated, retrying CGEventTap creation")
+            tapCreationAttempts = 0
+            setupCGEventTap()
+            DispatchQueue.main.async { [weak self] in
+                self?.isTapActive = self?.eventTap != nil
+            }
+        }
+    }
+
     deinit {
         stopTapHealthCheck()
+        if let observer = reactivationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         if let source = runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
         }

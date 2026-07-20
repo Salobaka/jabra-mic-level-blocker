@@ -38,8 +38,13 @@ echo "Ad-hoc code signing..."
 codesign --force --deep --options runtime --sign - "$APP_BUNDLE" >/dev/null 2>&1 || \
     codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
 
+xattr -cr "$APP_BUNDLE" 2>/dev/null || true
+
 echo "Built: $APP_BUNDLE"
 echo "Run with: open '$APP_BUNDLE'"
 echo
 echo "NOTE: First launch on this Mac prompts for Microphone, Bluetooth, and Input Monitoring."
 echo "      Each rebuild re-signs ad-hoc, so Input Monitoring must be re-granted after every build."
+echo
+echo "Sequoia 15: if the app does not appear in the Input Monitoring list, run once:"
+echo "  sudo xattr -cr '$APP_BUNDLE'"

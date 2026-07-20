@@ -54,7 +54,10 @@ xattr -cr JabraInputTracker.app
 # 3. (Optional) Move to /Applications
 mv JabraInputTracker.app /Applications/
 
-# 4. Launch
+# 4. Sequoia 15 only: strip provenance so the app appears in TCC lists
+sudo xattr -cr /Applications/JabraInputTracker.app
+
+# 5. Launch
 open /Applications/JabraInputTracker.app
 ```
 
@@ -64,7 +67,7 @@ On first launch, macOS prompts for:
 - **Input Monitoring** → Open *System Settings* → toggle **JabraInputTracker** on
 
 > Sequoia / Sonoma path: *System Settings → Privacy & Security → Input Monitoring*.
-> If the toggle is missing, click the `+` and add `/Applications/JabraInputTracker.app`.
+> If the toggle is missing, click the `+` and add the `.app` manually.
 
 Done. The menu-bar mic icon appears. Permissions persist for this exact binary.
 
@@ -80,16 +83,19 @@ xcode-select --install
 git clone https://github.com/Salobaka/jabra-mic-level-blocker.git jabra-input-tracker
 cd jabra-input-tracker
 
-# 3. Build (compiles + ad-hoc signs)
+# 3. Build (compiles + ad-hoc signs + strips provenance)
 ./build.sh
 
-# 4. Launch
+# 4. Sequoia 15 only: strip provenance so the app appears in TCC lists
+sudo xattr -cr .build/JabraInputTracker.app
+
+# 5. Launch
 open .build/JabraInputTracker.app
 ```
 
 On first launch, grant Microphone, Bluetooth, and Input Monitoring as in Path A.
 
-> After each `./build.sh`, **re-grant Input Monitoring** because the ad-hoc signature changes. Microphone and Bluetooth persist.
+> After each `./build.sh`, **re-grant Input Monitoring** because the ad-hoc signature changes. Microphone and Bluetooth persist. On Sequoia 15, also re-run `sudo xattr -cr` after each rebuild.
 
 ### Path C — Build and install to /Applications
 
@@ -102,7 +108,7 @@ cd jabra-input-tracker
 open /Applications/JabraInputTracker.app
 ```
 
-`install.sh` copies the bundle to `/Applications`, strips quarantine, re-signs, and launches.
+`install.sh` copies the bundle to `/Applications`, strips quarantine, re-signs, and launches. On Sequoia 15, run `sudo xattr -cr /Applications/JabraInputTracker.app` after install.
 
 ## Permissions (macOS Sequoia / Sonoma)
 
@@ -114,9 +120,26 @@ All three permissions are granted once per Mac. Path:
 - **Bluetooth** → *Bluetooth* → toggle **JabraInputTracker** on. Persists across rebuilds.
 - **Input Monitoring** → *Input Monitoring* → toggle **JabraInputTracker** on. **Resets after every rebuild** because the app is ad-hoc signed (no keychain, no paid cert). Re-grant after each `./build.sh`.
 
+> **Important:** the Daisy One mute button requires **Input Monitoring**, not Accessibility. Accessibility is not used by this app. If you granted Accessibility by mistake, it has no effect — grant Input Monitoring instead.
+
 If a toggle is missing from the list, click `+` and add the `.app` manually.
 
 For pre-built bundles (Path A), all three permissions persist forever for that exact binary.
+
+### Sequoia 15: app not in TCC permission lists
+
+On Sequoia 15, ad-hoc signed apps are tagged with `com.apple.provenance` on first launch, which blocks TCC registration. The app then never appears in Microphone, Bluetooth, or Input Monitoring lists. Fix:
+
+```bash
+sudo xattr -cr /Applications/JabraInputTracker.app
+open /Applications/JabraInputTracker.app
+```
+
+- `xattr -cr` removes the provenance tag (needs `sudo` on Sequoia — it's system-managed).
+- `spctl --add` is **no longer supported** on Sequoia 15.7+; stripping provenance is the only required step.
+- After this, the app appears in all three TCC lists and you can grant permissions normally.
+
+Run this once per Mac after install, and again after each rebuild (Path B).
 
 ## Manual
 
@@ -160,9 +183,10 @@ The Daisy section appears in the HUD when a paired Daisy One is detected.
 | --- | --- |
 | App says "Jabra not found" | Pair the Jabra Elite 85h in Bluetooth Settings and ensure it appears as an audio input device. |
 | Gain slider has no effect | The headset is controlling gain internally. Nothing to do; the 10% floor is still enforced where the OS allows it. |
-| Daisy mute button does nothing | Re-grant Input Monitoring: *System Settings → Privacy & Security → Input Monitoring → JabraInputTracker*. Then relaunch the app. |
+| Daisy mute button does nothing | Grant **Input Monitoring** (not Accessibility): *System Settings → Privacy & Security → Input Monitoring → JabraInputTracker*. Then click the app icon in the menu bar to reactivate the tap. |
+| App not in TCC permission list (Sequoia 15) | Run `sudo xattr -cr <bundle>`, then relaunch. See [Sequoia 15: app not in TCC permission lists](#sequoia-15-app-not-in-tcc-permission-lists). |
 | App is "damaged" on another Mac | Run `xattr -cr JabraInputTracker.app` to strip Gatekeeper quarantine. No keychain or notarization needed. |
-| Permissions reset after every rebuild | Expected: the app is ad-hoc signed, so each rebuild changes the signature. Re-grant Input Monitoring. Microphone and Bluetooth persist. |
+| Permissions reset after every rebuild | Expected: the app is ad-hoc signed, so each rebuild changes the signature. Re-grant Input Monitoring. Microphone and Bluetooth persist. On Sequoia 15, also re-run `sudo xattr -cr`. |
 | No menu-bar icon | The app crashed or was killed. Relaunch from Terminal to see stderr: `open .build/JabraInputTracker.app`. Check `~/Library/Logs/JabraInputTracker/app.log`. |
 
 ### Logs
