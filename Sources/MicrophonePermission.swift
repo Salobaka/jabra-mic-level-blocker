@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import Cocoa
 
 enum MicrophoneAuthorization: Equatable {
     case notDetermined
@@ -24,8 +25,20 @@ final class MicrophonePermission {
             completion(current)
             return
         }
+
+        let wasAccessory = NSApp.activationPolicy() == .accessory
+        if wasAccessory {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+
         AVCaptureDevice.requestAccess(for: .audio) { granted in
-            completion(granted ? .authorized : .denied)
+            DispatchQueue.main.async {
+                if wasAccessory {
+                    NSApp.setActivationPolicy(.accessory)
+                }
+                completion(granted ? .authorized : .denied)
+            }
         }
     }
 }

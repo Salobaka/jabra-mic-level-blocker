@@ -12,7 +12,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         daisyController.startMonitoring()
         menuBarManager = MenuBarManager(audioManager: audioManager, daisyController: daisyController)
         showHUD()
-        audioManager.requestMicrophoneAccess()
         observeReactivation()
     }
 

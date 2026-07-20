@@ -1,5 +1,6 @@
 import Foundation
 import CoreBluetooth
+import Cocoa
 
 final class BluetoothPermission: NSObject {
     static let shared = BluetoothPermission()
@@ -19,6 +20,7 @@ final class BluetoothPermission: NSObject {
 
     private var centralManager: CBCentralManager?
     private var completion: ((PermissionStatus) -> Void)?
+    private var wasAccessory: Bool = false
 
     private override init() {
         super.init()
@@ -29,6 +31,11 @@ final class BluetoothPermission: NSObject {
         guard current == .notDetermined else {
             completion(current)
             return
+        }
+        self.wasAccessory = NSApp.activationPolicy() == .accessory
+        if wasAccessory {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
         }
         self.completion = completion
         self.centralManager = CBCentralManager(delegate: self, queue: nil)
@@ -41,7 +48,10 @@ extension BluetoothPermission: CBCentralManagerDelegate {
         let c = completion
         completion = nil
         centralManager = nil
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            if self?.wasAccessory == true {
+                NSApp.setActivationPolicy(.accessory)
+            }
             c?(resolved)
         }
     }
