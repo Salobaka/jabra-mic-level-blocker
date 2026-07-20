@@ -41,29 +41,11 @@ codesign --force --deep --options runtime --sign - "$APP_BUNDLE" >/dev/null 2>&1
 
 xattr -cr "$APP_BUNDLE" 2>/dev/null || true
 
-if xattr "$APP_BUNDLE" 2>/dev/null | grep -q "com.apple.provenance"; then
-    echo
-    echo "Stripping Sequoia provenance attribute (requires your password)..."
-    if sudo -n xattr -cr "$APP_BUNDLE" 2>/dev/null; then
-        echo "Provenance stripped (cached sudo)."
-    elif [ -t 0 ]; then
-        sudo xattr -cr "$APP_BUNDLE"
-        if xattr "$APP_BUNDLE" 2>/dev/null | grep -q "com.apple.provenance"; then
-            echo "WARNING: provenance still present after sudo. TCC modals will not appear." >&2
-        else
-            echo "Provenance stripped."
-        fi
-    else
-        echo "WARNING: Cannot strip provenance in non-interactive mode." >&2
-        echo "  TCC modals will NOT appear until you run:" >&2
-        echo "  sudo xattr -cr '$APP_BUNDLE'" >&2
-    fi
-fi
-
 echo "Built: $APP_BUNDLE"
 echo "Run with: open '$APP_BUNDLE'"
 echo
-echo "NOTE: Each rebuild re-signs ad-hoc (new cdhash), so ALL THREE permissions"
-echo "      (Microphone, Bluetooth, Input Monitoring) must be re-granted after every build."
-echo "  Microphone/Bluetooth: click Grant in the HUD popover."
-echo "  Input Monitoring: click Open Settings in the HUD, toggle on."
+echo "NOTE: On Sequoia 15.7, TCC modals cannot be triggered automatically"
+echo "      (com.apple.provenance is system-enforced and cannot be removed)."
+echo "      After each build, manually add the app to each TCC list:"
+echo "        System Settings → Privacy & Security → [Microphone/Bluetooth/Input Monitoring] → +"
+echo "      Then click the app icon in the menu bar to re-check permissions."

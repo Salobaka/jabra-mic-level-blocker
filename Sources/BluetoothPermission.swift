@@ -44,6 +44,12 @@ final class BluetoothPermission: NSObject {
         AppLogger.shared.log("Bluetooth: creating CBCentralManager to trigger prompt")
         self.centralManager = CBCentralManager(delegate: self, queue: nil)
     }
+
+    func openSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth") {
+            NSWorkspace.shared.open(url)
+        }
+    }
 }
 
 extension BluetoothPermission: CBCentralManagerDelegate {

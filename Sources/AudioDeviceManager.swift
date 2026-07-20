@@ -62,6 +62,14 @@ final class AudioDeviceManager: ObservableObject {
         }
     }
 
+    func openMicrophoneSettings() {
+        MicrophonePermission.shared.openSettings()
+    }
+
+    func openBluetoothSettings() {
+        BluetoothPermission.shared.openSettings()
+    }
+
     // MARK: - Device discovery
 
     func refreshDevices() {

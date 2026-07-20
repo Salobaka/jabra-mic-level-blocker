@@ -44,10 +44,16 @@ final class MicrophonePermission {
                 }
                 AppLogger.shared.log("Mic: requestAccess returned granted=\(granted) in \(String(format: "%.0f", elapsed * 1000))ms")
                 if !granted && elapsed < 0.5 {
-                    AppLogger.shared.log("Mic: TCC refused without modal. Run: sudo xattr -cr <bundle> to strip provenance.")
+                    AppLogger.shared.log("Mic: TCC refused without modal. Provenance blocks on Sequoia 15.7. Add manually: System Settings → Privacy & Security → Microphone → +")
                 }
                 completion(granted ? .authorized : .denied)
             }
+        }
+    }
+
+    func openSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+            NSWorkspace.shared.open(url)
         }
     }
 }

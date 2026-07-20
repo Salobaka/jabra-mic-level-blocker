@@ -260,16 +260,16 @@ struct PermissionsSection: View {
                     icon: "mic.fill",
                     name: "Microphone",
                     status: audioManager.microphonePermission,
-                    actionTitle: "Grant",
-                    action: { audioManager.requestMicrophoneAccess() }
+                    actionTitle: "Open Settings",
+                    action: { audioManager.openMicrophoneSettings() }
                 )
 
                 PermissionRow(
                     icon: "antenna.radiowaves.left.and.right",
                     name: "Bluetooth",
                     status: audioManager.bluetoothPermission,
-                    actionTitle: "Grant",
-                    action: { audioManager.requestBluetoothAccess() }
+                    actionTitle: "Open Settings",
+                    action: { audioManager.openBluetoothSettings() }
                 )
 
                 PermissionRow(

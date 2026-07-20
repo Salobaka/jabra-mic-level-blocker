@@ -28,13 +28,10 @@ echo "Re-signing ad-hoc in place ..."
 codesign --force --deep --options runtime --sign - "$DEST_BUNDLE" >/dev/null 2>&1 || \
     codesign --force --deep --sign - "$DEST_BUNDLE" >/dev/null 2>&1 || true
 
-echo "Registering Gatekeeper exception ..."
-spctl --add "$DEST_BUNDLE" 2>/dev/null || true
-
 defaults delete com.salobaka.jabrainputtracker showDockIcon 2>/dev/null || true
 
 echo "Installed. Launch with: open '$DEST_BUNDLE'"
 echo
-echo "First launch prompts for Microphone, Bluetooth, and Input Monitoring."
-echo "Sequoia 15: if the app is missing from the Input Monitoring list, run:"
-echo "  sudo xattr -cr '$DEST_BUNDLE'"
+echo "On Sequoia 15.7, TCC modals cannot be triggered automatically."
+echo "After launch, open the HUD popover and click 'Open Settings' for each permission,"
+echo "then add the app via '+' in System Settings → Privacy & Security."
