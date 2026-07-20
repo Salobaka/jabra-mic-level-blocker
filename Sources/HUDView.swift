@@ -261,7 +261,7 @@ struct PermissionsSection: View {
                     name: "Microphone",
                     status: audioManager.microphonePermission,
                     actionTitle: "Open Settings",
-                    action: { audioManager.openMicrophoneSettings() }
+                    action: { audioManager.requestMicrophoneAndOpenSettings() }
                 )
 
                 PermissionRow(
@@ -269,7 +269,7 @@ struct PermissionsSection: View {
                     name: "Bluetooth",
                     status: audioManager.bluetoothPermission,
                     actionTitle: "Open Settings",
-                    action: { audioManager.openBluetoothSettings() }
+                    action: { audioManager.requestBluetoothAndOpenSettings() }
                 )
 
                 PermissionRow(

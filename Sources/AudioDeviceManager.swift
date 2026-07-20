@@ -70,6 +70,20 @@ final class AudioDeviceManager: ObservableObject {
         BluetoothPermission.shared.openSettings()
     }
 
+    func requestMicrophoneAndOpenSettings() {
+        requestMicrophoneAccess()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.openMicrophoneSettings()
+        }
+    }
+
+    func requestBluetoothAndOpenSettings() {
+        requestBluetoothAccess()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.openBluetoothSettings()
+        }
+    }
+
     // MARK: - Device discovery
 
     func refreshDevices() {
