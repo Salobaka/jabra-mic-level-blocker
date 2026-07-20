@@ -11,7 +11,7 @@
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.salobaka.jabrainputtracker</string>
+    <string>jabra-mic-level-handler</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -27,7 +27,7 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Jabra Input Tracker needs Bluetooth access to detect and manage your Jabra Elite 85h and Daisy One headsets.</string>
+    <string>Jabra Input Tracker needs Bluetooth access to detect and connect to your Jabra Elite 85h headset.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

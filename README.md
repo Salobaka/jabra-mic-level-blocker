@@ -229,7 +229,7 @@ rm -rf /Applications/JabraInputTracker.app
 
 # Remove saved state and logs (optional)
 rm -rf ~/Library/Logs/JabraInputTracker
-defaults delete com.salobaka.jabrainputtracker 2>/dev/null || true
+defaults delete jabra-mic-level-handler 2>/dev/null || true
 ```
 
 TCC permissions (Bluetooth) can be revoked in *System Settings → Privacy & Security*.

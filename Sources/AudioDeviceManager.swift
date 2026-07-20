@@ -111,8 +111,8 @@ final class AudioDeviceManager: ObservableObject {
     }
 
     func resetTCCForBluetooth() {
-        AppLogger.shared.log("Permissions: tccutil reset BluetoothAll com.salobaka.jabrainputtracker")
-        Process.launchedProcess(launchPath: "/usr/bin/tccutil", arguments: ["reset", "BluetoothAll", "com.salobaka.jabrainputtracker"])
+        AppLogger.shared.log("Permissions: tccutil reset BluetoothAll jabra-mic-level-handler")
+        Process.launchedProcess(launchPath: "/usr/bin/tccutil", arguments: ["reset", "BluetoothAll", "jabra-mic-level-handler"])
     }
 
     // MARK: - Device discovery

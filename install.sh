@@ -28,7 +28,7 @@ echo "Re-signing ad-hoc in place ..."
 codesign --force --deep --options runtime --sign - "$DEST_BUNDLE" >/dev/null 2>&1 || \
     codesign --force --deep --sign - "$DEST_BUNDLE" >/dev/null 2>&1 || true
 
-defaults delete com.salobaka.jabrainputtracker showDockIcon 2>/dev/null || true
+defaults delete jabra-mic-level-handler showDockIcon 2>/dev/null || true
 
 echo "Installed. Launch with: open '$DEST_BUNDLE'"
 echo

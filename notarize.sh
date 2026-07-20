@@ -20,7 +20,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 APP_NAME="JabraInputTracker"
-BUNDLE_ID="com.salobaka.jabrainputtracker"
+BUNDLE_ID="jabra-mic-level-handler"
 APP_BUNDLE=".build/$APP_NAME.app"
 ENTITLEMENTS="release.entitlements"
 RELEASE_DIR="release"
