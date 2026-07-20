@@ -4,6 +4,34 @@ import CoreAudioTypes
 import AudioToolbox
 import Cocoa
 
+private struct GainProperty: Equatable {
+    let useVirtualMain: Bool
+    let element: AudioObjectPropertyElement
+
+    func address() -> AudioObjectPropertyAddress {
+        if useVirtualMain {
+            return AudioObjectPropertyAddress(
+                mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+                mScope: kAudioDevicePropertyScopeInput,
+                mElement: 0
+            )
+        }
+        return AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioDevicePropertyScopeInput,
+            mElement: element
+        )
+    }
+}
+
+// Candidate gain properties probed in priority order. VirtualMainVolume first
+// because it is the OS Input Settings UI source of truth for Bluetooth devices.
+private let gainPropertyCandidates: [GainProperty] = [
+    GainProperty(useVirtualMain: true, element: 0),
+    GainProperty(useVirtualMain: false, element: 0),
+    GainProperty(useVirtualMain: false, element: 1)
+]
+
 final class AudioDeviceManager: ObservableObject {
     static let minimumGain: Float = 0.10
     static let gainTolerance: Float = 0.005
@@ -18,19 +46,42 @@ final class AudioDeviceManager: ObservableObject {
 
     private var propertyListener: AudioObjectPropertyListenerBlock?
     private var volumeEnforcementTimer: Timer?
+    private var permissionRefreshTimer: Timer?
     private var isReapplyingVolume = false
+
+    // Confirmed-writable gain properties for the current device session.
+    // Reset on device change. Populated by setInputGain via write-then-readback.
+    private var writableGainProperties: [GainProperty] = []
+    private var failedWriteCount: Int = 0
+    private let maxFailedWrites: Int = 3
 
     init() {
         UserDefaults.standard.removeObject(forKey: "showDockIcon")
         refreshDevices()
         setupDeviceChangeListener()
         refreshBluetoothPermission()
+        startPermissionAutoRefresh()
     }
 
     // MARK: - Permission
 
     func refreshBluetoothPermission() {
         bluetoothPermission = BluetoothPermission.shared.status
+    }
+
+    private func startPermissionAutoRefresh() {
+        stopPermissionAutoRefresh()
+        permissionRefreshTimer = Timer.scheduledTimer(
+            withTimeInterval: 1.0,
+            repeats: true
+        ) { [weak self] _ in
+            self?.refreshBluetoothPermission()
+        }
+    }
+
+    private func stopPermissionAutoRefresh() {
+        permissionRefreshTimer?.invalidate()
+        permissionRefreshTimer = nil
     }
 
     func requestBluetoothAccess() {
@@ -79,6 +130,10 @@ final class AudioDeviceManager: ObservableObject {
             jabraName = device.name
             gainIsWritable = deviceSupportsGain(device.id)
 
+            // Reset per-device enforcement state for the new device session.
+            writableGainProperties = []
+            failedWriteCount = 0
+
             // On first discovery, seed the user target from the device's current gain.
             // After that, preserve the user's target; do not let other apps corrupt it.
             let deviceGain = Double(getInputGain(for: device.id))
@@ -101,22 +156,6 @@ final class AudioDeviceManager: ObservableObject {
 
     // MARK: - Gain helpers
 
-    private func volumePropertyAddress(element: AudioObjectPropertyElement) -> AudioObjectPropertyAddress {
-        AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyVolumeScalar,
-            mScope: kAudioDevicePropertyScopeInput,
-            mElement: element
-        )
-    }
-
-    private func virtualMainVolumeAddress() -> AudioObjectPropertyAddress {
-        AudioObjectPropertyAddress(
-            mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
-            mScope: kAudioDevicePropertyScopeInput,
-            mElement: 0
-        )
-    }
-
     private func mutePropertyAddress(element: AudioObjectPropertyElement) -> AudioObjectPropertyAddress {
         AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyMute,
@@ -126,34 +165,48 @@ final class AudioDeviceManager: ObservableObject {
     }
 
     private func deviceSupportsGain(_ device: AudioDeviceID) -> Bool {
-        for element in [AudioObjectPropertyElement(0), AudioObjectPropertyElement(1)] {
-            var address = volumePropertyAddress(element: element)
+        for candidate in gainPropertyCandidates {
+            var address = candidate.address()
             if AudioObjectHasProperty(device, &address) { return true }
         }
-        var address = virtualMainVolumeAddress()
-        if AudioObjectHasProperty(device, &address) { return true }
         return false
     }
 
+    // Read gain, preferring confirmed-writable properties (they reflect what
+    // we and the OS actually set). Falls back to any existing property if no
+    // write has been confirmed yet.
     func getInputGain(for device: AudioDeviceID) -> Float {
-        for element in [AudioObjectPropertyElement(0), AudioObjectPropertyElement(1)] {
-            var address = volumePropertyAddress(element: element)
+        // Prefer confirmed-writable, VirtualMainVolume first.
+        for candidate in gainPropertyCandidates where writableGainProperties.contains(candidate) {
+            var address = candidate.address()
             if AudioObjectHasProperty(device, &address) {
-                var gain: Float = 0
-                var size = UInt32(MemoryLayout<Float>.size)
-                let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &gain)
-                if status == noErr { return gain }
+                if let value = readGain(device: device, address: address) { return value }
             }
         }
-
-        var address = virtualMainVolumeAddress()
-        if AudioObjectHasProperty(device, &address) {
-            var gain: Float = 0
-            var size = UInt32(MemoryLayout<Float>.size)
-            let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &gain)
-            if status == noErr { return gain }
+        // Fallback: any existing candidate, VirtualMainVolume first.
+        for candidate in gainPropertyCandidates {
+            var address = candidate.address()
+            if AudioObjectHasProperty(device, &address) {
+                if let value = readGain(device: device, address: address) { return value }
+            }
         }
         return 0.5
+    }
+
+    private func readGain(device: AudioDeviceID, address: AudioObjectPropertyAddress) -> Float? {
+        var addr = address
+        var gain: Float = 0
+        var size = UInt32(MemoryLayout<Float>.size)
+        let status = AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &gain)
+        return status == noErr ? gain : nil
+    }
+
+    private func writeGain(device: AudioDeviceID, address: AudioObjectPropertyAddress, value: Float) -> Bool {
+        var addr = address
+        var v = value
+        let size = UInt32(MemoryLayout<Float>.size)
+        let status = AudioObjectSetPropertyData(device, &addr, 0, nil, size, &v)
+        return status == noErr
     }
 
     private func setMute(_ muted: Bool, for device: AudioDeviceID) {
@@ -168,28 +221,42 @@ final class AudioDeviceManager: ObservableObject {
         }
     }
 
+    // Write to all existing candidate properties, then verify which ones stuck.
+    // Confirmed-writable properties are remembered for subsequent reads.
     func setInputGain(_ gain: Float, for device: AudioDeviceID) {
-        var value = max(min(gain, 1.0), 0.0)
-        let size = UInt32(MemoryLayout<Float>.size)
+        let value = max(min(gain, 1.0), 0.0)
 
         // Ensure device is not muted while we are running.
         setMute(false, for: device)
 
-        for element in [AudioObjectPropertyElement(0), AudioObjectPropertyElement(1)] {
-            var address = volumePropertyAddress(element: element)
-            if AudioObjectHasProperty(device, &address) {
-                AudioObjectSetPropertyData(device, &address, 0, nil, size, &value)
+        var confirmed: [GainProperty] = []
+
+        for candidate in gainPropertyCandidates {
+            var address = candidate.address()
+            guard AudioObjectHasProperty(device, &address) else { continue }
+
+            _ = writeGain(device: device, address: address, value: value)
+
+            // Read back to confirm the write actually took effect.
+            if let readback = readGain(device: device, address: address),
+               abs(readback - value) <= Self.gainTolerance {
+                confirmed.append(candidate)
             }
         }
 
-        var address = virtualMainVolumeAddress()
-        if AudioObjectHasProperty(device, &address) {
-            AudioObjectSetPropertyData(device, &address, 0, nil, size, &value)
+        if !confirmed.isEmpty {
+            writableGainProperties = confirmed
         }
     }
 
     func setInputGainFromUI(_ value: Double) {
         inputGain = max(value, Double(Self.minimumGain))
+        // User moved the slider — re-arm enforcement in case it had backed off.
+        failedWriteCount = 0
+        if jabraDevice != nil && !gainIsWritable {
+            gainIsWritable = deviceSupportsGain(jabraDevice!)
+            if gainIsWritable { startVolumeEnforcement() }
+        }
         applyTargetGain()
     }
 
@@ -245,13 +312,35 @@ final class AudioDeviceManager: ObservableObject {
             self?.currentDeviceGain = Double(current)
         }
 
-        guard abs(current - target) > Self.gainTolerance else { return }
+        guard abs(current - target) > Self.gainTolerance else {
+            // In sync — reset failure counter.
+            failedWriteCount = 0
+            return
+        }
 
-        AppLogger.shared.log("Enforcing gain: current=\(current), target=\(target), userTarget=\(userTarget), locked=\(lockVolume)")
+        AppLogger.shared.log("Enforcing gain: current=\(current), target=\(target), userTarget=\(userTarget), locked=\(lockVolume), confirmedProps=\(writableGainProperties.count)")
 
         isReapplyingVolume = true
         setInputGain(target, for: device)
         isReapplyingVolume = false
+
+        // Read back via the same (now possibly confirmed-writable) path.
+        let readback = getInputGain(for: device)
+
+        if abs(readback - target) <= Self.gainTolerance {
+            failedWriteCount = 0
+        } else {
+            failedWriteCount += 1
+            AppLogger.shared.log("Gain write did not stick: readback=\(readback), target=\(target), failedCount=\(failedWriteCount)/\(maxFailedWrites)")
+
+            if failedWriteCount >= maxFailedWrites {
+                AppLogger.shared.log("Gain write not sticking after \(maxFailedWrites) attempts — device may be hardware-controlled. Enforcement stopped.")
+                DispatchQueue.main.async { [weak self] in
+                    self?.gainIsWritable = false
+                }
+                stopVolumeEnforcement()
+            }
+        }
     }
 
     // MARK: - Device change listener
@@ -277,5 +366,6 @@ final class AudioDeviceManager: ObservableObject {
 
     deinit {
         stopVolumeEnforcement()
+        stopPermissionAutoRefresh()
     }
 }

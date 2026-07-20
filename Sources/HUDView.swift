@@ -171,19 +171,8 @@ struct PermissionsSection: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Permissions")
-                        .font(.system(size: 12, weight: .semibold))
-                    Spacer()
-                    Button {
-                        audioManager.refreshBluetoothPermission()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
+                Text("Permissions")
+                    .font(.system(size: 12, weight: .semibold))
 
                 PermissionRow(
                     icon: "antenna.radiowaves.left.and.right",
