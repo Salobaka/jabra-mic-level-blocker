@@ -99,6 +99,51 @@ open /Applications/JabraInputTracker.app
 
 `install.sh` copies the bundle to `/Applications`, strips quarantine, re-signs, and launches. Then grant Bluetooth permission as in Path A.
 
+## Releasing a signed + notarized build (GitHub distribution)
+
+For a build that **anyone can download from GitHub and run without disabling Gatekeeper**, you must sign with a **Developer ID Application** certificate and notarize it with Apple. This replaces the ad-hoc signing that `build.sh` does.
+
+### One-time setup
+
+1. **Create a Developer ID Application certificate** at <https://developer.apple.com/account/resources/certificates/list>:
+   - In Keychain Access: *Certificate Assistant → Request a Certificate from a Certificate Authority* → save the CSR to disk.
+   - On the website: **+** → **Developer ID Application** → upload the CSR → download the `.cer` → double-click to install in Keychain.
+2. **Generate an app-specific password** at <https://appleid.apple.com> (Sign in → App-Specific Passwords → label it `notarytool`).
+3. **Note your Team ID** at <https://developer.apple.com/account> → Membership Details (10-char string).
+4. Copy `notarize.env.example` → `notarize.env` and fill in:
+   ```bash
+   export APPLE_ID="you@example.com"
+   export APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+   export TEAM_ID="XXXXXXXXXX"
+   export SIGN_IDENTITY="Developer ID Application: Your Name (XXXXXXXXXX)"
+   ```
+   `notarize.env` is gitignored — never commit the filled-in copy.
+
+### Publishing a release
+
+```bash
+# 1. Build the app (ad-hoc signed is fine — notarize.sh re-signs)
+./build.sh
+
+# 2. Load secrets
+source notarize.env
+
+# 3. Sign + notarize + staple + zip (5-30 min)
+./notarize.sh                 # version pulled from Info.plist
+# or: ./notarize.sh 1.0.0     # explicit version
+
+# 4. Publish to GitHub (command printed by notarize.sh, NOT auto-run)
+gh release create v1.0.0 "release/JabraInputTracker-1.0.0-macos.zip" \
+  --title "v1.0.0" \
+  --generate-notes
+```
+
+`notarize.sh` signs with your Developer ID identity, applies `release.entitlements` (hardened runtime + Bluetooth + audio-input), submits to Apple's notarization service, staples the ticket, verifies Gatekeeper acceptance, and zips the final bundle. The output is `release/JabraInputTracker-<version>-macos.zip`.
+
+### Why this matters
+
+The ad-hoc build from `./build.sh` only runs on Macs that either disable Gatekeeper or `xattr -cr` the bundle. A Developer ID + notarized build opens silently on any macOS 10.15+ Mac with Gatekeeper on, which is what GitHub Releases need.
+
 ## Permissions (macOS Sequoia / Sonoma)
 
 One permission is used. On Sequoia 15.7, `com.apple.provenance` is system-enforced and **cannot be removed** (not even with `sudo xattr -cr`). TCC modals will not appear automatically. You must manually add the app to the TCC list.

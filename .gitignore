@@ -3,3 +3,7 @@
 *.xcuserstate
 *.xcodeproj
 *.xcworkspace
+
+# Release signing secrets (never commit filled-in notarize.env)
+notarize.env
+release/
