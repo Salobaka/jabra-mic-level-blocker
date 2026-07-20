@@ -297,6 +297,17 @@ struct PermissionsSection: View {
                     actionTitle: "Open Settings",
                     action: { daisyController.openInputMonitoringSettings() }
                 )
+
+                if daisyController.inputMonitoringStatus == .denied && !daisyController.currentCDHash.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Signature: \(daisyController.currentCDHash)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text("If permission was granted for a previous build, remove the old entry and re-add this one.")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                }
             }
         }
     }

@@ -57,6 +57,7 @@ final class DaisyMuteController: ObservableObject {
     @Published var daisyName: String = "Daisy One"
     @Published var isTapActive: Bool = false
     @Published var inputMonitoringStatus: PermissionStatus = .notDetermined
+    @Published var currentCDHash: String = ""
 
     private var propertyListener: AudioObjectPropertyListenerBlock?
     private var eventTap: CFMachPort?
@@ -79,6 +80,31 @@ final class DaisyMuteController: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             self?.handleReactivation()
+        }
+        loadCurrentCDHash()
+    }
+
+    private func loadCurrentCDHash() {
+        let bundleURL = Bundle.main.bundleURL
+        let task = Process()
+        task.launchPath = "/usr/bin/codesign"
+        task.arguments = ["-dvvv", bundleURL.path]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+        task.launch()
+        task.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        if let output = String(data: data, encoding: .utf8) {
+            for line in output.components(separatedBy: "\n") {
+                if line.hasPrefix("CDHash=") {
+                    let hash = String(line.dropFirst("CDHash=".count)).trimmingCharacters(in: .whitespaces)
+                    DispatchQueue.main.async { [weak self] in
+                        self?.currentCDHash = String(hash.prefix(12))
+                    }
+                    break
+                }
+            }
         }
     }
 
@@ -128,7 +154,7 @@ final class DaisyMuteController: ObservableObject {
         }
         inputMonitoringRetryCount += 1
         if inputMonitoringRetryCount > maxInputMonitoringRetries {
-            AppLogger.shared.log("Daisy: Input Monitoring retry exhausted after \(maxInputMonitoringRetries) attempts")
+            AppLogger.shared.log("Daisy: Input Monitoring retry exhausted after \(maxInputMonitoringRetries) attempts. TCC entry may be stale (different cdhash).")
             stopInputMonitoringRetry()
             DispatchQueue.main.async { [weak self] in
                 self?.inputMonitoringStatus = .denied
