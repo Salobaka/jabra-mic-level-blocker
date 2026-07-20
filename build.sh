@@ -35,6 +35,13 @@ swiftc -O -whole-module-optimization \
 
 cp "$INFO_PLIST" "$APP_BUNDLE/Contents/Info.plist"
 
+echo "Generating app icon..."
+if command -v swift >/dev/null 2>&1; then
+    swift tools/generate_icon.swift "$BUILD_DIR/AppIcon.iconset" "$RESOURCES_DIR/AppIcon.icns"
+else
+    echo "WARNING: swift not found, skipping icon generation" >&2
+fi
+
 echo "Ad-hoc code signing..."
 codesign --force --deep --options runtime --sign - "$APP_BUNDLE" >/dev/null 2>&1 || \
     codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true

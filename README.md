@@ -79,7 +79,7 @@ xcode-select --install
 git clone https://github.com/Salobaka/jabra-mic-level-blocker.git jabra-input-tracker
 cd jabra-input-tracker
 
-# 3. Build (compiles + ad-hoc signs)
+# 3. Build (compiles + generates pixel-art mic icon + ad-hoc signs)
 ./build.sh
 
 # 4. Launch

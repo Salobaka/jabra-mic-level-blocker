@@ -5,6 +5,7 @@ struct HUDView: View {
     @StateObject var audioManager: AudioDeviceManager
     @StateObject var daisyController: DaisyMuteController
     var onClose: () -> Void = {}
+    var onQuit: () -> Void = { NSApp.terminate(nil) }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -90,6 +91,18 @@ struct HUDView: View {
             if daisyController.isDaisyPaired {
                 Divider()
                 DaisySection(controller: daisyController)
+            }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button(action: onQuit) {
+                    Label("Close App", systemImage: "power")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.red)
             }
         }
         .padding()
