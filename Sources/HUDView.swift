@@ -21,17 +21,9 @@ struct HUDView: View {
                 .buttonStyle(.plain)
             }
 
-            if audioManager.authorizationStatus != .authorized {
-                VStack(spacing: 6) {
-                    Text("Microphone access required")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Button("Grant Permission") {
-                        audioManager.requestMicrophoneAccess()
-                    }
-                    .controlSize(.small)
-                }
-            } else if audioManager.jabraDevice != nil {
+            PermissionsSection(audioManager: audioManager, daisyController: daisyController)
+
+            if audioManager.microphonePermission == .granted && audioManager.jabraDevice != nil {
                 Toggle("Show mic level", isOn: Binding(
                     get: { audioManager.isRunning },
                     set: { newValue in
@@ -212,23 +204,6 @@ struct DaisySection: View {
                 Spacer()
             }
 
-            if !controller.isTapActive {
-                HStack(alignment: .top, spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Input Monitoring permission required for the headset button to work.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Button("Open System Settings") {
-                            controller.openInputMonitoringSettings()
-                        }
-                        .font(.caption2)
-                        .controlSize(.small)
-                    }
-                }
-            }
-
             Button {
                 controller.toggleMute()
             } label: {
@@ -240,6 +215,106 @@ struct DaisySection: View {
             }
             .controlSize(.small)
             .disabled(!controller.isDaisyConnected)
+        }
+    }
+}
+
+struct PermissionsSection: View {
+    @ObservedObject var audioManager: AudioDeviceManager
+    @ObservedObject var daisyController: DaisyMuteController
+
+    private var allGranted: Bool {
+        audioManager.microphonePermission == .granted &&
+        audioManager.bluetoothPermission == .granted &&
+        daisyController.inputMonitoringStatus == .granted
+    }
+
+    var body: some View {
+        if allGranted {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(.green)
+                Text("Permissions OK")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Permissions")
+                    .font(.system(size: 12, weight: .semibold))
+
+                PermissionRow(
+                    icon: "mic.fill",
+                    name: "Microphone",
+                    status: audioManager.microphonePermission,
+                    actionTitle: "Grant",
+                    action: { audioManager.requestMicrophoneAccess() }
+                )
+
+                PermissionRow(
+                    icon: "antenna.radiowaves.left.and.right",
+                    name: "Bluetooth",
+                    status: audioManager.bluetoothPermission,
+                    actionTitle: "Grant",
+                    action: { audioManager.requestBluetoothAccess() }
+                )
+
+                PermissionRow(
+                    icon: "dot.radiowaves.left.and.right",
+                    name: "Input Monitoring",
+                    status: daisyController.inputMonitoringStatus,
+                    actionTitle: "Open Settings",
+                    action: { daisyController.openInputMonitoringSettings() }
+                )
+            }
+        }
+    }
+}
+
+struct PermissionRow: View {
+    let icon: String
+    let name: String
+    let status: PermissionStatus
+    let actionTitle: String
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .frame(width: 16)
+                .foregroundStyle(.secondary)
+
+            Text(name)
+                .font(.system(size: 12))
+
+            Spacer()
+
+            statusBadge
+
+            if status != .granted {
+                Button(actionTitle, action: action)
+                    .font(.caption2)
+                    .controlSize(.small)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        switch status {
+        case .granted:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.system(size: 12))
+        case .denied:
+            Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(.red)
+                .font(.system(size: 12))
+        case .notDetermined:
+            Image(systemName: "circle.dotted")
+                .foregroundStyle(.yellow)
+                .font(.system(size: 12))
         }
     }
 }

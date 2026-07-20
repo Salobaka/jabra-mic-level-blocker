@@ -56,6 +56,7 @@ final class DaisyMuteController: ObservableObject {
     @Published var isMuted: Bool = false
     @Published var daisyName: String = "Daisy One"
     @Published var isTapActive: Bool = false
+    @Published var inputMonitoringStatus: PermissionStatus = .notDetermined
 
     private var propertyListener: AudioObjectPropertyListenerBlock?
     private var eventTap: CFMachPort?
@@ -89,6 +90,7 @@ final class DaisyMuteController: ObservableObject {
         if eventTap == nil {
             AppLogger.shared.log("Daisy: app reactivated, retrying CGEventTap creation")
             tapCreationAttempts = 0
+            inputMonitoringStatus = .notDetermined
             setupCGEventTap()
             DispatchQueue.main.async { [weak self] in
                 self?.isTapActive = self?.eventTap != nil
@@ -175,6 +177,7 @@ final class DaisyMuteController: ObservableObject {
             AppLogger.shared.log("Daisy: CGEventTap creation failed - Input Monitoring permission may be required")
             DispatchQueue.main.async { [weak self] in
                 self?.isTapActive = false
+                self?.inputMonitoringStatus = .denied
             }
             return
         }
@@ -186,6 +189,7 @@ final class DaisyMuteController: ObservableObject {
 
         DispatchQueue.main.async { [weak self] in
             self?.isTapActive = true
+            self?.inputMonitoringStatus = .granted
         }
         AppLogger.shared.log("Daisy: CGEventTap installed")
     }

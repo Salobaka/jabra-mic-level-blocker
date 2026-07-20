@@ -17,6 +17,8 @@ final class AudioDeviceManager: ObservableObject {
     @Published var level: Float = 0.0
     @Published var lockVolume: Bool = true
     @Published var authorizationStatus: MicrophoneAuthorization = MicrophonePermission.shared.status
+    @Published var microphonePermission: PermissionStatus = MicrophonePermission.shared.status == .authorized ? .granted : (MicrophonePermission.shared.status == .denied ? .denied : .notDetermined)
+    @Published var bluetoothPermission: PermissionStatus = BluetoothPermission.shared.status
     @Published var gainIsWritable: Bool = false
 
     private var levelMeter: LevelMeter?
@@ -30,6 +32,7 @@ final class AudioDeviceManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "showDockIcon")
         refreshDevices()
         setupDeviceChangeListener()
+        refreshBluetoothPermission()
     }
 
     // MARK: - Permission
@@ -38,9 +41,23 @@ final class AudioDeviceManager: ObservableObject {
         MicrophonePermission.shared.request { [weak self] status in
             DispatchQueue.main.async {
                 self?.authorizationStatus = status
+                self?.microphonePermission = status == .authorized ? .granted : .denied
                 if status == .authorized {
                     self?.refreshDevices()
                 }
+            }
+        }
+    }
+
+    func refreshBluetoothPermission() {
+        bluetoothPermission = BluetoothPermission.shared.status
+    }
+
+    func requestBluetoothAccess() {
+        BluetoothPermission.shared.request { [weak self] status in
+            DispatchQueue.main.async {
+                self?.bluetoothPermission = status
+                self?.refreshDevices()
             }
         }
     }

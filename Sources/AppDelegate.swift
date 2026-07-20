@@ -13,6 +13,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarManager = MenuBarManager(audioManager: audioManager, daisyController: daisyController)
         showHUD()
         audioManager.requestMicrophoneAccess()
+        observeReactivation()
+    }
+
+    private func observeReactivation() {
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.audioManager.refreshBluetoothPermission()
+            self?.audioManager.microphonePermission = MicrophonePermission.shared.status == .authorized ? .granted : (MicrophonePermission.shared.status == .denied ? .denied : .notDetermined)
+        }
     }
 
     private func buildMenu() {
