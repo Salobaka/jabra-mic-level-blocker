@@ -9,11 +9,27 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
 
     private let baseSymbol = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: nil)
     private let lockSymbol = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
+
+    // Cached, symbol-configured images — built once, reused every frame.
+    private lazy var unlockedMic: NSImage? = baseSymbol?.withSymbolConfiguration(
+        NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+            .applying(.init(hierarchicalColor: .black))
+    )
+    private lazy var lockedMic: NSImage? = baseSymbol?.withSymbolConfiguration(
+        NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+            .applying(.init(hierarchicalColor: .white))
+    )
+    private lazy var lockedBadge: NSImage? = lockSymbol?.withSymbolConfiguration(
+        NSImage.SymbolConfiguration(pointSize: 8, weight: .bold)
+            .applying(.init(hierarchicalColor: .systemOrange))
+    )
+
     private var timer: Timer?
 
-    // Lightweight breathing state. Updated at only 10 Hz.
+    // Animation state. 5 Hz is imperceptible for a 3 s breathing period.
     private var phase: Double = 0
     private let breathingPeriod: Double = 3.0
+    private let tickInterval: TimeInterval = 0.2
 
     init(audioManager: AudioDeviceManager) {
         self.audioManager = audioManager
@@ -21,8 +37,11 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         self.popover = NSPopover()
         super.init()
         setup()
-        startTimer()
         observeLockState()
+        renderCurrentFrame()
+        if audioManager.lockVolume {
+            startTimer()
+        }
     }
 
     deinit {
@@ -33,8 +52,6 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         statusItem.button?.imagePosition = .imageOnly
         statusItem.button?.action = #selector(togglePopover)
         statusItem.button?.target = self
-
-        updateIcon(alpha: 0)
 
         let hostingView = NSHostingView(rootView: HUDView(audioManager: self.audioManager, onClose: { [weak self] in
             self?.closePopover()
@@ -53,17 +70,26 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
     private func observeLockState() {
         audioManager.$lockVolume
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.renderCurrentFrame()
+            .sink { [weak self] locked in
+                guard let self = self else { return }
+                self.renderCurrentFrame()
+                if locked {
+                    self.startTimer()
+                } else {
+                    self.stopTimer()
+                }
             }
             .store(in: &cancellables)
     }
 
     private func startTimer() {
         stopTimer()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: tickInterval, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        t.tolerance = tickInterval * 0.2
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     private func stopTimer() {
@@ -72,7 +98,7 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
     }
 
     private func tick() {
-        phase += (2 * .pi) * (0.1 / breathingPeriod)
+        phase += (2 * .pi) * (tickInterval / breathingPeriod)
         if phase > 2 * .pi { phase -= 2 * .pi }
         renderCurrentFrame()
     }
@@ -84,45 +110,33 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
     }
 
     private func updateIcon(alpha: Double) {
-        guard let button = statusItem.button,
-              let baseSymbol = baseSymbol else { return }
+        guard let button = statusItem.button else { return }
 
         let isLocked = audioManager.lockVolume
-        let backgroundColor: NSColor = isLocked ? .systemOrange : .white
-        let symbolColor: NSColor = isLocked ? .white : .black
-        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
-            .applying(.init(hierarchicalColor: symbolColor))
-        let colored = baseSymbol.withSymbolConfiguration(config) ?? baseSymbol
+        let symbol = isLocked ? lockedMic : unlockedMic
+        guard let colored = symbol else { return }
 
         let size = colored.size
         let result = NSImage(size: size)
         result.lockFocus()
 
-        // Locked: soft orange breathing background. Unlocked: plain white background.
         if isLocked {
-            backgroundColor.withAlphaComponent(alpha).setFill()
+            NSColor.systemOrange.withAlphaComponent(alpha).setFill()
         } else {
-            backgroundColor.setFill()
+            NSColor.white.setFill()
         }
         NSRect(origin: .zero, size: size).fill()
 
-        // Draw mic icon using source-atop so it tints over the background.
         colored.draw(in: NSRect(origin: .zero, size: size),
                      from: NSRect(origin: .zero, size: size),
                      operation: .sourceAtop,
                      fraction: 1.0)
 
-        // High-contrast lock badge when lock is enabled.
-        if isLocked, let lockSymbol = lockSymbol {
+        if isLocked, let coloredLock = lockedBadge {
             let badgeSize = NSSize(width: size.width * 0.55, height: size.height * 0.55)
             let badgeOrigin = NSPoint(x: size.width - badgeSize.width + 2, y: -2)
             let badgeRect = NSRect(origin: badgeOrigin, size: badgeSize)
 
-            let badgeConfig = NSImage.SymbolConfiguration(pointSize: 8, weight: .bold)
-                .applying(.init(hierarchicalColor: .systemOrange))
-            let coloredLock = lockSymbol.withSymbolConfiguration(badgeConfig) ?? lockSymbol
-
-            // Small dark backing circle for contrast.
             let backing = NSBezierPath(ovalIn: badgeRect.insetBy(dx: -1, dy: -1))
             NSColor.black.withAlphaComponent(0.7).setFill()
             backing.fill()
@@ -134,7 +148,6 @@ final class MenuBarManager: NSObject, NSPopoverDelegate {
         }
 
         result.unlockFocus()
-
         button.image = result
     }
 

@@ -48,6 +48,8 @@ final class AudioDeviceManager: ObservableObject {
     private var volumeEnforcementTimer: Timer?
     private var permissionRefreshTimer: Timer?
     private var isReapplyingVolume = false
+    private var lastEnforceLogTime: Date = .distantPast
+    private let enforceLogThrottle: TimeInterval = 1.0
 
     // Confirmed-writable gain properties for the current device session.
     // Reset on device change. Populated by setInputGain via write-then-readback.
@@ -71,12 +73,12 @@ final class AudioDeviceManager: ObservableObject {
 
     private func startPermissionAutoRefresh() {
         stopPermissionAutoRefresh()
-        permissionRefreshTimer = Timer.scheduledTimer(
-            withTimeInterval: 1.0,
-            repeats: true
-        ) { [weak self] _ in
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.refreshBluetoothPermission()
         }
+        t.tolerance = 0.2
+        RunLoop.main.add(t, forMode: .common)
+        permissionRefreshTimer = t
     }
 
     private func stopPermissionAutoRefresh() {
@@ -285,9 +287,12 @@ final class AudioDeviceManager: ObservableObject {
 
     private func startVolumeEnforcement() {
         stopVolumeEnforcement()
-        volumeEnforcementTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
             self?.enforceVolume()
         }
+        t.tolerance = 0.05
+        RunLoop.main.add(t, forMode: .common)
+        volumeEnforcementTimer = t
     }
 
     private func stopVolumeEnforcement() {
@@ -318,7 +323,11 @@ final class AudioDeviceManager: ObservableObject {
             return
         }
 
-        AppLogger.shared.log("Enforcing gain: current=\(current), target=\(target), userTarget=\(userTarget), locked=\(lockVolume), confirmedProps=\(writableGainProperties.count)")
+        let now = Date()
+        if now.timeIntervalSince(lastEnforceLogTime) >= enforceLogThrottle {
+            AppLogger.shared.log("Enforcing gain: current=\(current), target=\(target), userTarget=\(userTarget), locked=\(lockVolume), confirmedProps=\(writableGainProperties.count)")
+            lastEnforceLogTime = now
+        }
 
         isReapplyingVolume = true
         setInputGain(target, for: device)
@@ -331,7 +340,9 @@ final class AudioDeviceManager: ObservableObject {
             failedWriteCount = 0
         } else {
             failedWriteCount += 1
-            AppLogger.shared.log("Gain write did not stick: readback=\(readback), target=\(target), failedCount=\(failedWriteCount)/\(maxFailedWrites)")
+            if now.timeIntervalSince(lastEnforceLogTime) >= enforceLogThrottle {
+                AppLogger.shared.log("Gain write did not stick: readback=\(readback), target=\(target), failedCount=\(failedWriteCount)/\(maxFailedWrites)")
+            }
 
             if failedWriteCount >= maxFailedWrites {
                 AppLogger.shared.log("Gain write not sticking after \(maxFailedWrites) attempts — device may be hardware-controlled. Enforcement stopped.")
@@ -353,19 +364,38 @@ final class AudioDeviceManager: ObservableObject {
         }
         self.propertyListener = listener
 
-        var address = AudioObjectPropertyAddress(
+        var defaultInputAddress = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultInputDevice,
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, nil, listener)
+        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &defaultInputAddress, nil, listener)
 
-        address.mSelector = kAudioHardwarePropertyDevices
-        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, nil, listener)
+        var devicesAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &devicesAddress, nil, listener)
     }
 
     deinit {
         stopVolumeEnforcement()
         stopPermissionAutoRefresh()
+        if let listener = propertyListener {
+            var defaultInputAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyDefaultInputDevice,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectRemovePropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &defaultInputAddress, nil, listener)
+
+            var devicesAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyDevices,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectRemovePropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &devicesAddress, nil, listener)
+        }
     }
 }

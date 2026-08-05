@@ -5,6 +5,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let audioManager = AudioDeviceManager()
     let floatingPanel = FloatingPanelController()
     var menuBarManager: MenuBarManager?
+    private var reactivationObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildMenu()
@@ -14,12 +15,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func observeReactivation() {
-        NotificationCenter.default.addObserver(
+        reactivationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             self?.audioManager.refreshBluetoothPermission()
+        }
+    }
+
+    deinit {
+        if let observer = reactivationObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
