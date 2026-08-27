@@ -7,3 +7,6 @@
 # Release signing secrets (never commit filled-in notarize.env)
 notarize.env
 release/
+
+# Windows Rust build output
+windows/target/
