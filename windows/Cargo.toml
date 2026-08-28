@@ -1,6 +1,6 @@
 [package]
 name = "jabra-input-tracker"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 description = "Locks the Jabra Elite 85h microphone input level (gain lock + 10% floor)"
 repository = "https://github.com/Salobaka/jabra-mic-level-blocker"
@@ -26,8 +26,10 @@ features = [
     "Win32_Storage_FileSystem",
     "Win32_System_Com",
     "Win32_System_Console",
+    "Win32_System_Registry",
     "Win32_System_Threading",
     "Win32_System_Variant",
+    "Win32_UI_HiDpi",
     "Win32_UI_Shell_PropertiesSystem",
     "Win32_UI_WindowsAndMessaging",
 ]

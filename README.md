@@ -243,24 +243,37 @@ Out of scope for v1: Bluetooth connect/disconnect buttons (Windows manages BT au
 ### Download
 
 - CI artifact: every push to `main` builds `JabraInputTracker.exe` — grab it from the GitHub Actions run artifacts.
-- Releases: tag a version (`git tag v1.0.0 && git push --tags`) and the CI attaches `JabraInputTracker-<tag>-windows-x64.zip` to the GitHub Release.
+- Releases: tag a version (`git tag v1.1.1 && git push --tags`) and the CI attaches `JabraInputTracker-<tag>-windows-x64.zip` to the GitHub Release.
 
 The exe is unsigned, so SmartScreen will warn on first run: **More info → Run anyway**.
 
 ### Usage
 
 - Run `JabraInputTracker.exe` — a mic icon appears in the system tray.
-- Left-click the tray icon to show/hide the control window (slider 10–100%, Lock checkbox, status, Close App).
+- Left-click the tray icon to show/hide the control window (slider 10–100%, Lock checkbox, Start with Windows checkbox, status, Close App).
 - The tray icon pulses orange while the lock is active.
+- **Start with Windows** checkbox: toggles autostart via `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (no admin needed).
+- **DPI-aware**: the UI scales correctly on high-DPI displays (125–150% scaling on Win11).
+- **Single-instance**: launching a second copy shows a message box and exits.
+- **Crash reporting**: if the app panics, a message box appears with the error and the log file path.
 - Logs: `%LOCALAPPDATA%\JabraInputTracker\app.log` (1 MB cap, rotates to `app.log.1`).
 
 Debug modes:
 
 ```powershell
+JabraInputTracker.exe --version           # print version
 JabraInputTracker.exe --list              # print all active capture endpoints (console)
 JabraInputTracker.exe --daemon            # headless enforcement, no UI
 JabraInputTracker.exe --daemon --gain 0.6 # headless, lock gain to 60%
+JabraInputTracker.exe --crash-test         # trigger a panic to test crash reporting
 ```
+
+### Win11 notes
+
+- **Tray overflow**: Windows 11 may hide the tray icon in the overflow area. Drag it to the taskbar tray for always-visible access.
+- **SmartScreen**: the exe is unsigned — on first run, click **More info → Run anyway**. No malware; it's just untrusted.
+- **No admin needed**: the app is a portable single exe with static CRT. No installer, no VC++ redist, no registry write except the optional autostart toggle.
+- **DPI awareness**: the app calls `SetProcessDpiAwarenessContext(PER_MONITOR_AWARE_V2)` at startup; UI layout scales with the system DPI.
 
 ### Build from source
 

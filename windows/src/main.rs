@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 mod audio;
+mod autostart;
 mod crash;
 mod logger;
 mod tray;
@@ -14,19 +15,23 @@ use std::time::Duration;
 
 use audio::engine::{self, SharedState};
 use windows::core::w;
-use windows::Win32::Foundation::ERROR_ALREADY_EXISTS;
+use windows::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS};
 use windows::Win32::System::Com::CoInitializeEx;
 use windows::Win32::System::Com::COINIT_MULTITHREADED;
 use windows::Win32::System::Console::{
     AttachConsole, GetStdHandle, ATTACH_PARENT_PROCESS, STD_OUTPUT_HANDLE,
 };
 use windows::Win32::System::Threading::CreateMutexW;
+use windows::Win32::UI::HiDpi::{
+    SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
+};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     crash::install();
     logger::init();
+    set_dpi_aware();
     logger::info(&format!("Application starting v{VERSION}"));
 
     let args: Vec<String> = env::args().collect();
@@ -65,9 +70,13 @@ fn shared_state() -> Arc<Mutex<SharedState>> {
 
 fn single_instance_running() -> bool {
     match unsafe { CreateMutexW(None, false, w!("JabraInputTrackerSingleInstance")) } {
-        Ok(_) => false,
+        Ok(_) => unsafe { GetLastError().0 == ERROR_ALREADY_EXISTS.0 },
         Err(err) => err.code() == windows::core::HRESULT::from_win32(ERROR_ALREADY_EXISTS.0),
     }
+}
+
+fn set_dpi_aware() {
+    let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
 }
 
 fn attach_parent_console() {

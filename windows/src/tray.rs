@@ -7,8 +7,10 @@ use native_windows_gui as nwg;
 use nwg::{CheckBoxState, Event, MousePressEvent, WindowFlags};
 
 use crate::audio::engine::{self, SharedState, Status};
+use crate::autostart;
 use crate::crash;
 use crate::logger;
+use windows::Win32::UI::HiDpi::GetDpiForSystem;
 
 const ICON_LOCKED: &[u8] = include_bytes!("../assets/icon_locked.ico");
 const ICON_LOCKED_DIM: &[u8] = include_bytes!("../assets/icon_locked_dim.ico");
@@ -33,6 +35,7 @@ pub struct Ui {
     slider: nwg::TrackBar,
     percent_value: nwg::Label,
     lock_check: nwg::CheckBox,
+    autostart_check: nwg::CheckBox,
     status_label: nwg::Label,
     close_btn: nwg::Button,
 
@@ -62,6 +65,12 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
         } else {
             CheckBoxState::Unchecked
         });
+        u.autostart_check
+            .set_check_state(if autostart::is_enabled() {
+                CheckBoxState::Checked
+            } else {
+                CheckBoxState::Unchecked
+            });
     }
 
     let window_handle = ui.borrow().window.handle;
@@ -89,6 +98,10 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
                         let mut s = engine::lock_shared(&shared);
                         s.locked = locked;
                         logger::info(&format!("Lock input level: {locked}"));
+                    } else if handle == u.autostart_check.handle {
+                        let enable = u.autostart_check.check_state() == CheckBoxState::Checked;
+                        let ok = autostart::set_enabled(enable);
+                        logger::info(&format!("Start with Windows: {enable} (ok={ok})"));
                     } else if handle == u.close_btn.handle {
                         logger::info("Close App clicked - exiting");
                         drop(u);
@@ -135,13 +148,17 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
 fn build_ui(ui: &Rc<RefCell<Ui>>) -> Result<(), nwg::NwgError> {
     let mut u = ui.borrow_mut();
 
+    let dpi = unsafe { GetDpiForSystem() };
+    let scale = if dpi > 0 { dpi as f64 / 96.0 } else { 1.0 };
+    let s = |v: i32| (v as f64 * scale) as i32;
+
     let icon_locked = nwg::Icon::from_bin(ICON_LOCKED)?;
     let icon_locked_dim = nwg::Icon::from_bin(ICON_LOCKED_DIM)?;
     let icon_unlocked = nwg::Icon::from_bin(ICON_UNLOCKED)?;
 
     nwg::Window::builder()
-        .size((390, 250))
-        .position((500, 400))
+        .size((s(390), s(290)))
+        .position((s(500), s(400)))
         .title(APP_TITLE)
         .flags(WindowFlags::WINDOW | WindowFlags::MINIMIZE_BOX | WindowFlags::SYS_MENU)
         .build(&mut u.window)?;
@@ -169,56 +186,64 @@ fn build_ui(ui: &Rc<RefCell<Ui>>) -> Result<(), nwg::NwgError> {
 
     nwg::Label::builder()
         .text("Device:")
-        .position((20, 20))
-        .size((70, 20))
+        .position((s(20), s(20)))
+        .size((s(70), s(20)))
         .parent(&u.window)
         .build(&mut u.device_caption)?;
     nwg::Label::builder()
         .text("not found")
-        .position((95, 20))
-        .size((275, 20))
+        .position((s(95), s(20)))
+        .size((s(275), s(20)))
         .parent(&u.window)
         .build(&mut u.device_value)?;
 
     nwg::Label::builder()
         .text("Input level:")
-        .position((20, 60))
-        .size((75, 20))
+        .position((s(20), s(60)))
+        .size((s(75), s(20)))
         .parent(&u.window)
         .build(&mut u.level_caption)?;
     nwg::TrackBar::builder()
         .range(Some(10..100))
         .pos(Some(100))
-        .position((100, 55))
-        .size((200, 30))
+        .position((s(100), s(55)))
+        .size((s(200), s(30)))
         .parent(&u.window)
         .build(&mut u.slider)?;
     nwg::Label::builder()
         .text("100%")
-        .position((305, 60))
-        .size((55, 20))
+        .position((s(305), s(60)))
+        .size((s(55), s(20)))
         .parent(&u.window)
         .build(&mut u.percent_value)?;
 
     nwg::CheckBox::builder()
         .text("Lock input level (re-applies 4x per second)")
         .check_state(CheckBoxState::Unchecked)
-        .position((20, 100))
-        .size((350, 25))
+        .position((s(20), s(100)))
+        .size((s(350), s(25)))
         .parent(&u.window)
         .build(&mut u.lock_check)?;
 
+    nwg::CheckBox::builder()
+        .text("Start with Windows")
+        .check_state(CheckBoxState::Unchecked)
+        .position((s(20), s(130)))
+        .size((s(350), s(25)))
+        .parent(&u.window)
+        .build(&mut u.autostart_check)?;
+
     nwg::Label::builder()
         .text("Jabra not found - waiting...")
-        .position((20, 135))
-        .size((350, 40))
+        .position((s(20), s(165)))
+        .size((s(350), s(40)))
         .parent(&u.window)
         .build(&mut u.status_label)?;
 
     nwg::Button::builder()
         .text("Close App")
-        .position((20, 185))
-        .size((100, 30))
+        .position((s(20), s(220)))
+        .size((s(100), s(30)))
         .parent(&u.window)
         .build(&mut u.close_btn)?;
 
