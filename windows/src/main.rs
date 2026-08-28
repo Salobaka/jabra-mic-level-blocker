@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 mod audio;
+mod crash;
 mod logger;
 mod tray;
 
@@ -21,30 +22,45 @@ use windows::Win32::System::Console::{
 };
 use windows::Win32::System::Threading::CreateMutexW;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn main() {
+    crash::install();
     logger::init();
-    logger::info("Application starting");
+    logger::info(&format!("Application starting v{VERSION}"));
 
     let args: Vec<String> = env::args().collect();
-    let shared = Arc::new(Mutex::new(SharedState::default()));
 
+    if args.iter().any(|a| a == "--version" || a == "-v") {
+        print_to_console(&format!("JabraInputTracker v{VERSION}\n"));
+        return;
+    }
+    if args.iter().any(|a| a == "--crash-test") {
+        panic!("crash-test requested");
+    }
     if args.iter().any(|a| a == "--list") {
         cmd_list();
         return;
     }
     if args.iter().any(|a| a == "--daemon") {
-        cmd_daemon(&shared, &args);
+        cmd_daemon(&shared_state(), &args);
         return;
     }
 
     if single_instance_running() {
         logger::info("another instance is already running - exiting");
+        crash::show_messagebox("Another instance of Jabra Input Tracker is already running.");
         return;
     }
 
+    let shared = shared_state();
     engine::spawn(shared.clone());
     tray::run(shared);
     logger::info("Application exiting");
+}
+
+fn shared_state() -> Arc<Mutex<SharedState>> {
+    Arc::new(Mutex::new(SharedState::default()))
 }
 
 fn single_instance_running() -> bool {

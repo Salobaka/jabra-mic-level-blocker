@@ -7,6 +7,7 @@ use native_windows_gui as nwg;
 use nwg::{CheckBoxState, Event, MousePressEvent, WindowFlags};
 
 use crate::audio::engine::{self, SharedState, Status};
+use crate::crash;
 use crate::logger;
 
 const ICON_LOCKED: &[u8] = include_bytes!("../assets/icon_locked.ico");
@@ -41,14 +42,12 @@ pub struct Ui {
 
 pub fn run(shared: Arc<Mutex<SharedState>>) {
     if let Err(err) = nwg::init() {
-        logger::error(&format!("UI init failed: {err}"));
-        return;
+        crash::fatal_error(&format!("Failed to initialize Windows GUI: {err}"));
     }
 
     let ui = Rc::new(RefCell::new(Ui::default()));
     if let Err(err) = build_ui(&ui) {
-        logger::error(&format!("UI build failed: {err}"));
-        return;
+        crash::fatal_error(&format!("Failed to build UI: {err}"));
     }
 
     {
