@@ -43,6 +43,12 @@ fn main() {
     if args.iter().any(|a| a == "--crash-test") {
         panic!("crash-test requested");
     }
+    if args.iter().any(|a| a == "--ui-smoke") {
+        let shared = shared_state();
+        engine::spawn(shared.clone());
+        tray::run(shared, true);
+        return;
+    }
     if args.iter().any(|a| a == "--list") {
         cmd_list();
         return;
@@ -60,7 +66,7 @@ fn main() {
 
     let shared = shared_state();
     engine::spawn(shared.clone());
-    tray::run(shared);
+    tray::run(shared, false);
     logger::info("Application exiting");
 }
 

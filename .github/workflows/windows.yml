@@ -26,6 +26,8 @@ jobs:
       - run: cargo build --release
       - name: Smoke run
         run: ./target/release/JabraInputTracker.exe --list
+      - name: UI smoke test
+        run: ./target/release/JabraInputTracker.exe --ui-smoke
       - uses: actions/upload-artifact@v4
         with:
           name: JabraInputTracker-windows-x64

@@ -28,6 +28,7 @@ pub struct Ui {
 
     poll_timer: nwg::AnimationTimer,
     anim_timer: nwg::AnimationTimer,
+    smoke_timer: nwg::AnimationTimer,
 
     device_caption: nwg::Label,
     device_value: nwg::Label,
@@ -43,7 +44,7 @@ pub struct Ui {
     last_tip: String,
 }
 
-pub fn run(shared: Arc<Mutex<SharedState>>) {
+pub fn run(shared: Arc<Mutex<SharedState>>, smoke: bool) {
     if let Err(err) = nwg::init() {
         crash::fatal_error(&format!("Failed to initialize Windows GUI: {err}"));
     }
@@ -51,6 +52,17 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
     let ui = Rc::new(RefCell::new(Ui::default()));
     if let Err(err) = build_ui(&ui) {
         crash::fatal_error(&format!("Failed to build UI: {err}"));
+    }
+
+    if smoke {
+        let mut u = ui.borrow_mut();
+        nwg::AnimationTimer::builder()
+            .parent(&u.window)
+            .interval(Duration::from_millis(500))
+            .max_tick(Some(1))
+            .active(true)
+            .build(&mut u.smoke_timer)
+            .expect("smoke timer");
     }
 
     {
@@ -74,6 +86,7 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
     }
 
     let window_handle = ui.borrow().window.handle;
+    let tray_handle = ui.borrow().tray.handle;
     let window_handler = {
         let ui = ui.clone();
         let shared = shared.clone();
@@ -82,6 +95,17 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
             match evt {
                 Event::OnWindowClose => {
                     u.window.set_visible(false);
+                }
+                Event::OnMousePress(MousePressEvent::MousePressLeftUp) => {
+                    if handle == tray_handle {
+                        let visible = u.window.visible();
+                        u.window.set_visible(!visible);
+                    }
+                }
+                Event::OnContextMenu => {
+                    if handle == tray_handle {
+                        u.window.set_visible(true);
+                    }
                 }
                 Event::OnHorizontalScroll | Event::TrackBarUpdated => {
                     if handle == u.slider.handle {
@@ -115,23 +139,10 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
                         animate(&mut u, &shared);
                     }
                 }
-                _ => {}
-            }
-        })
-    };
-
-    let tray_handle = ui.borrow().tray.handle;
-    let tray_handler = {
-        let ui = ui.clone();
-        nwg::full_bind_event_handler(&tray_handle, move |evt, _data, _handle| {
-            let u = ui.borrow();
-            match evt {
-                Event::OnMousePress(MousePressEvent::MousePressLeftUp) => {
-                    let visible = u.window.visible();
-                    u.window.set_visible(!visible);
-                }
-                Event::OnContextMenu => {
-                    u.window.set_visible(true);
+                Event::OnTimerStop if handle == u.smoke_timer.handle => {
+                    logger::info("UI smoke test OK");
+                    drop(u);
+                    nwg::stop_thread_dispatch();
                 }
                 _ => {}
             }
@@ -141,7 +152,6 @@ pub fn run(shared: Arc<Mutex<SharedState>>) {
     logger::info("tray UI running");
     nwg::dispatch_thread_events();
     nwg::unbind_event_handler(&window_handler);
-    nwg::unbind_event_handler(&tray_handler);
     logger::info("tray UI stopped");
 }
 
