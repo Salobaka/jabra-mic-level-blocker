@@ -2,7 +2,7 @@ use windows::core::{Result, PCWSTR, PROPVARIANT};
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{
-    eCapture, IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator, DEVICE_STATE_ACTIVE,
+    eCapture, eConsole, IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator, DEVICE_STATE_ACTIVE,
 };
 use windows::Win32::System::Com::{CoCreateInstance, CoTaskMemFree, CLSCTX_ALL, STGM_READ};
 use windows::Win32::System::Variant::VT_LPWSTR;
@@ -14,6 +14,16 @@ pub struct CaptureEndpoint {
 
 pub fn create_enumerator() -> Result<IMMDeviceEnumerator> {
     unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }
+}
+
+/// Endpoint ID of the currently selected (default) capture device,
+/// or None if there is no default (e.g. all inputs disabled).
+pub fn default_capture_id(enumerator: &IMMDeviceEnumerator) -> Option<String> {
+    let device = unsafe { enumerator.GetDefaultAudioEndpoint(eCapture, eConsole) }.ok()?;
+    let id_raw = unsafe { device.GetId() }.ok()?;
+    let id = unsafe { id_raw.to_string() }.ok();
+    unsafe { CoTaskMemFree(Some(id_raw.0 as *const core::ffi::c_void)) };
+    id
 }
 
 pub fn list_capture_endpoints(

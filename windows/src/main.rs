@@ -111,33 +111,40 @@ fn cmd_list() {
     out.push_str("Active capture endpoints (eCapture, DEVICE_STATE_ACTIVE):\n");
     init_com_mta();
     match audio::discovery::create_enumerator() {
-        Ok(enumerator) => match audio::discovery::list_capture_endpoints(&enumerator) {
-            Ok(endpoints) => {
-                let selected = audio::discovery::find_jabra_index(&endpoints);
-                if endpoints.is_empty() {
-                    out.push_str("  <none>\n");
+        Ok(enumerator) => {
+            let default_id = audio::discovery::default_capture_id(&enumerator);
+            match audio::discovery::list_capture_endpoints(&enumerator) {
+                Ok(endpoints) => {
+                    let selected = audio::discovery::find_jabra_index(&endpoints);
+                    if endpoints.is_empty() {
+                        out.push_str("  <none>\n");
+                    }
+                    for (i, (name, id, device)) in endpoints.iter().enumerate() {
+                        let ep = audio::discovery::open_endpoint(device);
+                        let (vol, mute) = match &ep {
+                            Ok(e) => (
+                                format!("{:.0}%", e.volume_scalar().unwrap_or(0.0) * 100.0),
+                                e.muted().map(|m| m.to_string()).unwrap_or_default(),
+                            ),
+                            Err(_) => ("?".to_string(), String::new()),
+                        };
+                        let mark = match (
+                            Some(i) == selected,
+                            default_id.as_deref() == Some(id.as_str()),
+                        ) {
+                            (true, true) => " [SELECTED+DEFAULT]",
+                            (true, false) => " [SELECTED]",
+                            (false, true) => " [DEFAULT]",
+                            (false, false) => "",
+                        };
+                        out.push_str(&format!(
+                            "  {i}: {name} - volume {vol}, muted {mute}{mark}\n"
+                        ));
+                    }
                 }
-                for (i, (name, _id, device)) in endpoints.iter().enumerate() {
-                    let ep = audio::discovery::open_endpoint(device);
-                    let (vol, mute) = match &ep {
-                        Ok(e) => (
-                            format!("{:.0}%", e.volume_scalar().unwrap_or(0.0) * 100.0),
-                            e.muted().map(|m| m.to_string()).unwrap_or_default(),
-                        ),
-                        Err(_) => ("?".to_string(), String::new()),
-                    };
-                    let mark = if Some(i) == selected {
-                        " [SELECTED]"
-                    } else {
-                        ""
-                    };
-                    out.push_str(&format!(
-                        "  {i}: {name} - volume {vol}, muted {mute}{mark}\n"
-                    ));
-                }
+                Err(err) => out.push_str(&format!("enumeration failed: {err}\n")),
             }
-            Err(err) => out.push_str(&format!("enumeration failed: {err}\n")),
-        },
+        }
         Err(err) => out.push_str(&format!("enumerator init failed: {err}\n")),
     }
     out.push('\n');
@@ -161,12 +168,13 @@ fn cmd_daemon(shared: &Arc<Mutex<SharedState>>, args: &[String]) {
         std::thread::sleep(Duration::from_secs(5));
         let s = engine::lock_shared(shared);
         print_to_console(&format!(
-            "device={:?} volume={:?} status={:?} target={:.0}% locked={}\n",
+            "device={:?} volume={:?} status={:?} target={:.0}% locked={} default_jabra={}\n",
             s.device_name,
             s.current_volume.map(|v| format!("{:.0}%", v * 100.0)),
             s.status,
             s.target * 100.0,
-            s.locked
+            s.locked,
+            s.default_is_jabra
         ));
     }
 }

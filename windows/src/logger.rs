@@ -41,6 +41,10 @@ pub fn info(msg: &str) {
     write("INFO", msg);
 }
 
+pub fn warn(msg: &str) {
+    write("WARN", msg);
+}
+
 pub fn error(msg: &str) {
     write("ERROR", msg);
 }

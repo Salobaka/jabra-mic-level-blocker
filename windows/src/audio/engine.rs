@@ -31,6 +31,8 @@ pub struct SharedState {
     pub device_name: Option<String>,
     pub current_volume: Option<f32>,
     pub status: Status,
+    /// True when the currently selected (default) input device is the Jabra.
+    pub default_is_jabra: bool,
 }
 
 impl Default for SharedState {
@@ -42,6 +44,7 @@ impl Default for SharedState {
             device_name: None,
             current_volume: None,
             status: Status::NotFound,
+            default_is_jabra: false,
         }
     }
 }
@@ -86,6 +89,7 @@ fn engine_main(shared: Arc<Mutex<SharedState>>) {
     let mut gain_ok = true;
     let mut last_enforce_log: Option<Instant> = None;
     let mut last_missing_log: Option<Instant> = None;
+    let mut last_default_is_jabra: Option<bool> = None;
     let mut last_scan = Instant::now();
     let mut next_tick = Instant::now();
 
@@ -110,6 +114,12 @@ fn engine_main(shared: Arc<Mutex<SharedState>>) {
             let found = discovery::list_capture_endpoints(&enumerator)
                 .ok()
                 .and_then(|eps| discovery::find_jabra_index(&eps).map(|i| (eps, i)));
+            let default_is_jabra = found
+                .as_ref()
+                .map(|(eps, i)| {
+                    discovery::default_capture_id(&enumerator).is_some_and(|d| d == eps[*i].1)
+                })
+                .unwrap_or(false);
             match found {
                 Some((eps, i)) => match discovery::open_endpoint(&eps[i].2) {
                     Ok(ep) => {
@@ -142,6 +152,15 @@ fn engine_main(shared: Arc<Mutex<SharedState>>) {
                     Some(_) => Status::Active,
                     None => Status::NotFound,
                 };
+                s.default_is_jabra = default_is_jabra;
+            }
+            if endpoint.is_some() && last_default_is_jabra != Some(default_is_jabra) {
+                last_default_is_jabra = Some(default_is_jabra);
+                if default_is_jabra {
+                    logger::info("Jabra is the selected default input");
+                } else {
+                    logger::warn("Jabra connected but NOT the selected default input");
+                }
             }
         }
 
