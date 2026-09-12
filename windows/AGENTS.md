@@ -36,7 +36,7 @@ cargo clippy --release --target x86_64-pc-windows-msvc -- -D warnings
 ## Release flow
 
 1. Bump `version` in `Cargo.toml`, commit, push `main` (push procedure in root `AGENTS.md`).
-2. `git tag vX.Y.Z` and push the tag → `.github/workflows/windows.yml` builds and attaches `JabraInputTracker-vX.Y.Z-windows-x64.zip` to a GitHub Release.
+2. `git tag vX.Y.Z` and push the tag → `.github/workflows/windows.yml` builds and attaches `JabraInputTracker-vX.Y.Z-windows-x64.zip` to a GitHub Release titled **`Windows vX.Y.Z`** (title set by the workflow — keep the platform prefix).
 3. CI also runs `--list` and `--ui-smoke` on windows-latest — a startup panic fails the build. Keep both modes working.
 
 ## Conventions & gotchas
