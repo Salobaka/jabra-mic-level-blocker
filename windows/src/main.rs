@@ -3,6 +3,7 @@
 mod audio;
 mod autostart;
 mod crash;
+mod glow_icon;
 mod logger;
 mod tray;
 

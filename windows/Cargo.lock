@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "jabra-input-tracker"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "native-windows-gui",
  "windows",
