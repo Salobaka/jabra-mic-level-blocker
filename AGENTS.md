@@ -40,7 +40,7 @@ Keep these backlinks in place when editing docs.
 ## Git / GitHub (repo: `Salobaka/jabra-mic-level-blocker`, public)
 
 - Commit to `main`; tag releases `v<major.minor.patch>` (Windows flow in `windows/AGENTS.md`).
-- **Release titles are platform-marked**: `Windows vX.Y.Z` (set by `windows.yml`) and `macOS X.Y` (old manual releases). Tags: `v*` = Windows, bare `1.0/1.1/1.2` = legacy macOS builds. If macOS ever gets CI releases, mark them `macOS vX.Y.Z` in the title.
+- **Release titles are platform-marked**: `Win vX.Y.Z` (set by `windows.yml`) and `Mac X.Y` (old manual releases). Tags: `v*` = Windows, bare `1.0/1.1/1.2` = legacy macOS builds. If macOS ever gets CI releases, mark them `Mac vX.Y.Z` in the title.
 - **Push procedure** (the `$GITHUB_TOKEN` env var holds a fine-grained PAT that cannot push cross-account — always unset it and use the `gh` keyring token):
   ```bash
   unset GITHUB_TOKEN

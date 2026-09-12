@@ -48,5 +48,5 @@ jobs:
         run: cd dist && zip "JabraInputTracker-${{ github.ref_name }}-windows-x64.zip" JabraInputTracker.exe
       - uses: softprops/action-gh-release@v2
         with:
-          name: Windows ${{ github.ref_name }}
+          name: Win ${{ github.ref_name }}
           files: dist/*.zip
