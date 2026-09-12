@@ -1,5 +1,7 @@
 # AGENTS.md — macOS app
 
+> **Scope guard:** this file governs only `macos/` (Swift). The Windows app is a separate Rust codebase in [`../windows/`](../windows/) ([`../windows/AGENTS.md`](../windows/AGENTS.md)) — **never** create or edit files there unless the user explicitly asked for a Windows change. Routing rules, push procedure, and the wrong-codebase STOP check: [root `../AGENTS.md`](../AGENTS.md). Shared behavior contract: [`../common/spec.md`](../common/spec.md).
+
 Swift menu-bar agent (`LSUIElement`, no Dock icon). Pure `swiftc` build — no Xcode project, no third-party dependencies.
 
 ## Layout

@@ -1,5 +1,7 @@
 # Behavioral contract — both platforms
 
+> **AI agents:** routing rules and the wrong-codebase STOP check live in [root `../AGENTS.md`](../AGENTS.md). Platform code: [`../macos/`](../macos/) (Swift) and [`../windows/`](../windows/) (Rust) — never edit one platform's code for the other platform's task.
+
 The macOS (Swift) and Windows (Rust) apps share no code, but must behave the same. When you change any behavior listed here on one platform, treat it as a **parity change**: flag the other platform's gap in its `AGENTS.md`/README and tell the user.
 
 ## Device detection

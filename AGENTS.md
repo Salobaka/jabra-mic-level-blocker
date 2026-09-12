@@ -18,6 +18,25 @@ Two native apps sharing one behavioral contract. **Zero shared code** (Swift vs 
 3. **Never** put platform-specific files at the repo root or in the other platform's directory. Tools/scripts live in `<platform>/tools/`.
 4. Root-level files are limited to: this file, `README.md`, `.gitignore`, `common/`, `.github/`.
 
+### Wrong-codebase guard — STOP check
+
+Before writing any file, verify the file path against the request:
+
+- macOS request → paths must start with `macos/` (Swift). If you are about to write Rust (`windows/`), you are in the **wrong codebase** — stop and re-read the request.
+- Windows request → paths must start with `windows/` (Rust). If you are about to write Swift (`macos/`), you are in the **wrong codebase** — stop and re-read the request.
+- Docs/CI/spec requests → only `README.md`, `AGENTS.md`, `common/`, `.github/` at root, plus the matching platform docs.
+- A parity change is the **only** reason to touch the other platform, and even then you only add a gap note to its `AGENTS.md`/README — never its code, unless the user explicitly asked for both platforms.
+
+### Backlink convention
+
+Every directory doc links back here so an agent landing anywhere gets routed correctly:
+
+- `macos/README.md`, `macos/AGENTS.md` → link to this file, `../windows/`, `../common/spec.md`.
+- `windows/README.md`, `windows/AGENTS.md` → link to this file, `../macos/`, `../common/spec.md`.
+- `common/spec.md` → links to this file.
+
+Keep these backlinks in place when editing docs.
+
 ## Git / GitHub (repo: `Salobaka/jabra-mic-level-blocker`, public)
 
 - Commit to `main`; tag releases `v<major.minor.patch>` (Windows flow in `windows/AGENTS.md`).

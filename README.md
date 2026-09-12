@@ -27,4 +27,10 @@ This is a monorepo with two independent native apps sharing one behavioral contr
 
 ## For AI agents / contributors
 
-Read [AGENTS.md](AGENTS.md) first — it explains the repo layout, the platform routing rules, and the release procedures.
+> **STOP — read [AGENTS.md](AGENTS.md) before changing anything.** It defines which directory you are allowed to edit:
+>
+> - **macOS task** → work only in [`macos/`](macos/) (Swift). Never touch `windows/`.
+> - **Windows task** → work only in [`windows/`](windows/) (Rust). Never touch `macos/`.
+> - **Shared behavior** → [`common/spec.md`](common/spec.md); a change there is a parity change for both apps.
+>
+> Each platform directory has its own `AGENTS.md` and `README.md` with backlinks — follow them. Writing Swift for a Windows request (or Rust for a macOS request) means you are in the wrong codebase: stop and re-read the routing rules.

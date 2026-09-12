@@ -1,5 +1,7 @@
 # Jabra Mic Level Blocker — Windows
 
+> **AI agents: you are in the Windows codebase (Rust).** Work only inside `windows/`. The macOS app is a separate Swift codebase in [`../macos/`](../macos/) — do not edit it from a Windows task. Routing rules: [root AGENTS.md](../AGENTS.md) · Agent guide: [windows/AGENTS.md](AGENTS.md) · Shared behavior: [common/spec.md](../common/spec.md).
+
 Rust port of the macOS app for **Windows 10/11 x64**: same gain lock (re-applies 4×/second) and 10% floor for the Jabra Elite 85h, with a system-tray icon and a small control window. **No permissions are needed on Windows** — there is no TCC equivalent for endpoint volume control. See [common/spec.md](../common/spec.md) for the behavior contract.
 
 Out of scope: Bluetooth connect/disconnect buttons (Windows manages BT audio profiles natively).

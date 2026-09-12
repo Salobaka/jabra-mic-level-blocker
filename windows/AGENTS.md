@@ -1,5 +1,7 @@
 # AGENTS.md — Windows app
 
+> **Scope guard:** this file governs only `windows/` (Rust). The macOS app is a separate Swift codebase in [`../macos/`](../macos/) ([`../macos/AGENTS.md`](../macos/AGENTS.md)) — **never** create or edit files there unless the user explicitly asked for a macOS change. Routing rules, push procedure, and the wrong-codebase STOP check: [root `../AGENTS.md`](../AGENTS.md). Shared behavior contract: [`../common/spec.md`](../common/spec.md).
+
 Rust system-tray app. Crates: `native-windows-gui 1.0.13` (UI), `windows 0.58` + `windows-core 0.58` (WASAPI/Win32). Single self-contained exe (static CRT via `+crt-static` in `.cargo/config.toml`), no admin, unsigned.
 
 ## Layout

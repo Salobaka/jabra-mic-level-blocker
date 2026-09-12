@@ -1,5 +1,7 @@
 # Jabra Mic Level Blocker — macOS
 
+> **AI agents: you are in the macOS codebase (Swift).** Work only inside `macos/`. The Windows app is a separate Rust codebase in [`../windows/`](../windows/) — do not edit it from a macOS task. Routing rules: [root AGENTS.md](../AGENTS.md) · Agent guide: [macos/AGENTS.md](AGENTS.md) · Shared behavior: [common/spec.md](../common/spec.md).
+
 A tiny native macOS menu-bar app that keeps a **Jabra Elite 85h** headset from muting itself during calls. See the [root README](../README.md) for the story and [common/spec.md](../common/spec.md) for the behavior contract.
 
 ## Features
