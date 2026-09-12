@@ -31,7 +31,7 @@ The macOS (Swift) and Windows (Rust) apps share no code, but must behave the sam
 Current parity status:
 
 - **Windows** (v1.2.1): target defaults to 100 % but lock starts **OFF** (floor only); "Start with Windows" checkbox starts **OFF** (opt-in).
-- **macOS**: lock starts ON, but first device discovery currently **adopts the device's current gain** instead of 100 %; launch-at-login **not implemented** (SMAppService planned — see `macos/AGENTS.md`).
+- **macOS**: target 100 % at first discovery, lock ON, launch-at-login ON by default (SMAppService, HUD opt-out checkbox) — **fully aligned** with the norm.
 
 ## Platform-explicit differences (not parity gaps)
 

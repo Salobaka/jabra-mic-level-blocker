@@ -6,9 +6,11 @@ A tiny native macOS menu-bar app that keeps a **Jabra Elite 85h** headset from m
 
 - Menu-bar icon with a popover containing all controls
 - Input gain fader from **10% to 100%** — set the mic level in percent, not arbitrary units
+- **Defaults to 100%** on launch — enforcement starts immediately (no need to set the level)
 - **10% minimum gain is always enforced** — you can never be accidentally muted to zero
 - **Unmute on every gain write** — clears the hardware/OS mute flag
 - **Lock input level** — re-applies the chosen gain 4× per second so apps like MS Teams, Kumospace, Zoom and Google Meet cannot pull the mic level down
+- **Launch at login** — enabled by default on first launch (macOS 13+); opt out via the HUD checkbox or System Settings → General → Login Items
 - **No microphone permission required** — gain control uses CoreAudio property writes only
 
 ## Requirements

@@ -3,6 +3,7 @@ import AppKit
 
 struct HUDView: View {
     @StateObject var audioManager: AudioDeviceManager
+    @StateObject private var loginItems = LoginItemManager.shared
     var onClose: () -> Void = {}
     var onQuit: () -> Void = { NSApp.terminate(nil) }
 
@@ -73,6 +74,19 @@ struct HUDView: View {
             }
 
             Divider()
+
+            Toggle("Launch at login", isOn: Binding(
+                get: { loginItems.enabled },
+                set: { loginItems.setEnabled($0) }
+            ))
+            .font(.system(size: 12))
+            .disabled(!loginItems.isSupported)
+
+            if !loginItems.isSupported {
+                Text("Launch at login requires macOS 13.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
 
             HStack {
                 Spacer()

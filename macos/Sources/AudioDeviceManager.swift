@@ -38,7 +38,7 @@ final class AudioDeviceManager: ObservableObject {
 
     @Published var jabraDevice: AudioDeviceID?
     @Published var jabraName: String = "Jabra Elite 85h"
-    @Published var inputGain: Double = 0.5
+    @Published var inputGain: Double = 1.0
     @Published var currentDeviceGain: Double = 0.5
     @Published var lockVolume: Bool = true
     @Published var bluetoothPermission: PermissionStatus = BluetoothPermission.shared.status
@@ -136,12 +136,12 @@ final class AudioDeviceManager: ObservableObject {
             writableGainProperties = []
             failedWriteCount = 0
 
-            // On first discovery, seed the user target from the device's current gain.
-            // After that, preserve the user's target; do not let other apps corrupt it.
+            // On first discovery, start at 100% (app default). After that, preserve
+            // the user's target; do not let other apps corrupt it.
             let deviceGain = Double(getInputGain(for: device.id))
             currentDeviceGain = deviceGain
             if isFirstDiscovery {
-                inputGain = max(deviceGain, Double(Self.minimumGain))
+                inputGain = 1.0
             }
 
             updateVolumeEnforcement()

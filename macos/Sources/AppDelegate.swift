@@ -8,6 +8,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var reactivationObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        _ = LoginItemManager.shared // applies launch-at-login preference
         buildMenu()
         menuBarManager = MenuBarManager(audioManager: audioManager)
         showHUD()

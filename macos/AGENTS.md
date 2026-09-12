@@ -13,6 +13,7 @@ Swift menu-bar agent (`LSUIElement`, no Dock icon). Pure `swiftc` build — no X
 | `Sources/HUDView.swift` | Popover UI (SwiftUI) |
 | `Sources/MenuBarManager.swift` | Status-item, menu, popover wiring |
 | `Sources/AppLogger.swift` | Rotating log → `~/Library/Logs/JabraInputTracker/app.log` |
+| `Sources/LoginItemManager.swift` | Launch-at-login via SMAppService (macOS 13+); ON by default, UserDefaults opt-out |
 | `build.sh` | Compile + generate icon + ad-hoc sign → `.build/JabraInputTracker.app` |
 | `install.sh` | Copy bundle to `/Applications`, strip quarantine, re-sign, launch |
 | `rebuild.sh` | build + install + relaunch |
